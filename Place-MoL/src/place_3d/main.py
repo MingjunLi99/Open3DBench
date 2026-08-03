@@ -15,6 +15,7 @@ from src.run_dmp import ProblemInstance, seed_torch
 from src.place_3d.macroRefiner import MacroRefiner
 from src.place_3d.macroPlacer import MacroPlacer
 from src.utils import DefProcessor
+from src.utils.runtime_log import write_stage_runtime_log
 from src.place_3d.legalization import MacroLegalizer
 import copy
 
@@ -930,8 +931,15 @@ def main():
     print("\nCreating ProblemInstance...")
     init_problem_instance = ProblemInstance(args, args.benchmark)
     
-    # Step 1: Partition
+    # Step 1: Partition.  Time only the actual partition algorithm so input
+    # database construction is not mixed into the reported partition runtime.
+    partition_start = time.perf_counter()
     partition_result = step_1_partition(args, init_problem_instance)
+    partition_runtime = time.perf_counter() - partition_start
+
+    # Placement runtime covers all stages after partition, including final
+    # cell legalization and suffixed DEF generation.
+    placement_start = time.perf_counter()
 
     # Step 2: 2D Placement for prototype
     gp_hpwl = step_2_prototype(args, init_problem_instance, partition_result)
@@ -986,6 +994,16 @@ def main():
 
     # Step 8: Legalize cells
     legalized_hpwl = step_8_cell_legalization(args, partition_result)
+    placement_runtime = time.perf_counter() - placement_start
+
+    write_stage_runtime_log(
+        result_dir=result_dir,
+        benchmark=args.benchmark,
+        placement_method="mol-analytical",
+        partition_method=partition_method,
+        partition_seconds=partition_runtime,
+        placement_seconds=placement_runtime,
+    )
 
     # Calculate total runtime
     total_runtime = time.time() - start_time
@@ -1001,6 +1019,8 @@ def main():
     print(f"After Upper-Die Legalization: {upper_legalized_hpwl:.2f}")
     print(f"Mem-on-logic HPWL before legalization: {final_cell_hpwl:.2f}")
     print(f"Mem-on-logic HPWL after legalization: {legalized_hpwl:.2f}")
+    print(f"Partition Runtime: {partition_runtime:.2f} seconds")
+    print(f"Placement Runtime: {placement_runtime:.2f} seconds")
     print(f"Total Runtime: {total_runtime:.2f} seconds ({total_runtime/60:.2f} minutes)")
     print("="*50)
 

@@ -89,6 +89,21 @@ Intermediate work directories are created under:
 
 The archived directories contain the runtime log and copied evaluation artifacts such as generated PNGs and HotSpot outputs when available.
 
+### Placement Handoff Export
+
+For a placement-only handoff, `run_mol_placement_export.sh` stops immediately
+after importing each final Place-MoL DEF. It writes a normalized DEF, a
+structurally matching Verilog netlist, and an OpenDB checkpoint without
+running CTS or routing:
+
+```bash
+cd OpenROAD-3D/flow
+./export_mol_defs_from_place_mol.sh mol-analytical
+./run_mol_placement_export.sh evaluation_pack_custom mol-analytical
+```
+
+Outputs are stored as `placement_exports/<design>/<design>.{def,v,odb}`.
+
 ## MoL Evaluation
 
 There are two supported ways to provide DEFs for the MoL experiments.

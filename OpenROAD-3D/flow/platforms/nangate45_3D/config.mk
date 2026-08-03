@@ -90,7 +90,7 @@ export CTS_BUF_CELL   ?= BUF_X4_bottom
 # ---------------------------------------------------------
 # FastRoute options
 export MIN_ROUTING_LAYER = metal2
-export MAX_ROUTING_LAYER = metal20
+export MAX_ROUTING_LAYER = metal12
 
 # Define fastRoute tcl
 export FASTROUTE_TCL ?= $(PLATFORM_DIR)/fastroute.tcl

@@ -143,6 +143,37 @@ We also especially thank:
 
 for their discussions and help during the development of the new release.
 
+## Local 6+6-Layer MoL Flow
+
+This workspace variant retains six low metal layers on each die. The lower
+die uses `metal1`-`metal6`; source upper-die `metal15`-`metal20` is renumbered
+to `metal7`-`metal12`. The face-to-face interface is therefore
+`metal6 / hb_layer / metal7`. Unlike the sibling Innovus flow, this OpenROAD
+variant deliberately retains the native Open3DBench HBT cut/via model.
+
+For advanced-node timing studies, ordinary `metal1`-`metal12` resistance is
+scaled by 10 in the technology LEFs, early OpenROAD RC model, and OpenRCX
+rules.  Metal capacitance and all cut/via/HBT parameters remain unchanged.
+
+Validate the checked-in PDK conversion with:
+
+```bash
+python3 OpenROAD-3D/flow/platforms/nangate45_3D/scripts/convert_to_6plus6.py --check
+```
+
+After installing the Place-MoL benchmark package as documented in its README,
+the complete placement-only handoff sequence is:
+
+```bash
+cd Place-MoL
+USE_CUDA=False ./scripts/experiments_mol_analytical.sh
+cd ../OpenROAD-3D/flow
+./export_mol_defs_from_place_mol.sh mol-analytical
+./run_mol_placement_export.sh evaluation_pack_custom mol-analytical
+cd ../..
+./collect_placement_benchmarks.sh mol-analytical
+```
+
 ## Citation
 
 ```bibtex

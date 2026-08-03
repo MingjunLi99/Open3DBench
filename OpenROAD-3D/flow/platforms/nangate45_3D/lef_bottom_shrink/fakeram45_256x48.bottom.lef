@@ -1404,7 +1404,7 @@ MACRO fakeram45_256x48_bottom
     DIRECTION INOUT ;
     USE GROUND ;
     PORT
-      LAYER metal17 ;
+      LAYER metal9 ;
       RECT 2.660 2.800 2.940 64.400 ;
       RECT 7.140 2.800 7.420 64.400 ;
       RECT 11.620 2.800 11.900 64.400 ;
@@ -1436,7 +1436,7 @@ MACRO fakeram45_256x48_bottom
     DIRECTION INOUT ;
     USE POWER ;
     PORT
-      LAYER metal17 ;
+      LAYER metal9 ;
       RECT 4.900 2.800 5.180 64.400 ;
       RECT 9.380 2.800 9.660 64.400 ;
       RECT 13.860 2.800 14.140 64.400 ;
@@ -1465,9 +1465,9 @@ MACRO fakeram45_256x48_bottom
     END
   END VDD
   OBS
-    LAYER metal20 ;
+    LAYER metal12 ;
     RECT 0 0 115.710 67.200 ;
-    LAYER metal19 ;
+    LAYER metal11 ;
     RECT 0 0 115.710 67.200 ;
     LAYER metal3 ;
     RECT 0.070 0 115.710 67.200 ;
@@ -1627,7 +1627,7 @@ MACRO fakeram45_256x48_bottom
     RECT 0 62.230 0.070 62.440 ;
     RECT 0 62.510 0.070 62.720 ;
     RECT 0 62.790 0.070 67.200 ;
-    LAYER metal17 ;
+    LAYER metal9 ;
     RECT 0 0 115.710 2.800 ;
     RECT 0 64.400 115.710 67.200 ;
     RECT 0.000 2.800 2.660 64.400 ;

@@ -22,14 +22,6 @@ MACRO TSV
       RECT 0.0 0.0 5.0 5.0 ;
     LAYER metal6 ;
       RECT 0.0 0.0 5.0 5.0 ;
-    LAYER metal7 ;
-      RECT 0.0 0.0 5.0 5.0 ;
-    LAYER metal8 ;
-      RECT 0.0 0.0 5.0 5.0 ;
-    LAYER metal9 ;
-      RECT 0.0 0.0 5.0 5.0 ;
-    LAYER metal10 ;
-      RECT 0.0 0.0 5.0 5.0 ;
   END
 END TSV
 

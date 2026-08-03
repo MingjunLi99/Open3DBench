@@ -106,6 +106,11 @@ class ProblemInstance():
             json_path = os.path.join(DREAMPLACE_ROOT_DIR, "test", "or_3D", f'{self.benchmark}_3D.json')
         params.load(json_path)
 
+        # Keep DREAMPlace's own device selection aligned with the surrounding
+        # Place-MoL operators.  The benchmark JSONs hard-code "gpu": 1, which
+        # otherwise defeats the --use_cuda=False server fallback.
+        params.gpu = bool(self.args.use_cuda)
+
         # Benchmark resources now live under Place-MoL/benchmarks.
         project_path_fields = [
             "aux_input",

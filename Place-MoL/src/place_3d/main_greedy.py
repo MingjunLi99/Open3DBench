@@ -25,6 +25,7 @@ from src.place_3d.main import (
     step_7_cell_replacement,
     step_8_cell_legalization,
 )
+from src.utils.runtime_log import write_stage_runtime_log
 
 
 def get_result_dir_greedy(partition_method):
@@ -153,7 +154,10 @@ def main():
 
     print("\nCreating ProblemInstance...")
     init_problem_instance = ProblemInstance(args, args.benchmark)
+    partition_start = time.perf_counter()
     partition_result = step_1_partition(args, init_problem_instance)
+    partition_runtime = time.perf_counter() - partition_start
+    placement_start = time.perf_counter()
 
     # Before macro place: save DEF + fix macro -> macro_fixed.def (no place_2D)
     fixed_def_path = save_and_fix_def(args, init_problem_instance, partition_method)
@@ -188,8 +192,17 @@ def main():
     final_cell_hpwl = step_7_cell_replacement(args, cell_problem_instance, partition_result)
     legalized_hpwl = step_8_cell_legalization(args, partition_result)
 
+    placement_runtime = time.perf_counter() - placement_start
     total_runtime = time.time() - start_time
     result_dir = get_result_dir_greedy(partition_method)
+    write_stage_runtime_log(
+        result_dir=result_dir,
+        benchmark=args.benchmark,
+        placement_method="mol-tiling",
+        partition_method=partition_method,
+        partition_seconds=partition_runtime,
+        placement_seconds=placement_runtime,
+    )
 
     print("\n" + "=" * 50)
     print("Pipeline Summary (Greedy)")
@@ -198,6 +211,8 @@ def main():
     print(f"Mem-on-logic HPWL before legalization: {final_cell_hpwl:.2f}")
     print(f"Mem-on-logic HPWL after legalization: {legalized_hpwl:.2f}")
     print(f"Total Runtime: {total_runtime:.2f} s ({total_runtime / 60:.2f} min)")
+    print(f"Partition Runtime: {partition_runtime:.2f} s")
+    print(f"Placement Runtime: {placement_runtime:.2f} s")
     print("=" * 50)
 
     csv_path = os.path.join(result_dir, "mol_final", "mem_on_logic_results.csv")

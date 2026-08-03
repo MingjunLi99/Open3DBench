@@ -107,6 +107,11 @@ Analytical placement flow:
 ./scripts/experiments_mol_analytical.sh
 ```
 
+The official image contains CUDA 11.0 / PyTorch 1.7. On a GPU whose compute
+capability is not present in that build, run the same deterministic flow on
+CPU with `USE_CUDA=False ./scripts/experiments_mol_analytical.sh`. `GPU_ID`
+selects the GPU when CUDA is compatible.
+
 Tiling placement flow:
 
 ```bash
@@ -190,5 +195,12 @@ Typical final files:
 - `mol_final/<design>_suffixed.def`
 - `mol_final/<design>_legalized.png`
 - `mol_final/mem_on_logic_results.csv`
+
+Each completed design also writes
+`results/<method>/runtime/<design>.runtime.log`. `partition_seconds` measures
+only `step_1_partition`, excluding benchmark/database loading.
+`placement_seconds` measures all subsequent Place-MoL stages through cell
+legalization and final suffixed-DEF generation. Analytical and tiling runs use
+the same log format.
 
 These DEFs are the MoL placement outputs later consumed by `OpenROAD-3D` for routing, timing analysis, and thermal evaluation.

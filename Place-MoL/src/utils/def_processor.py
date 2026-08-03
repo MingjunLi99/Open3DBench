@@ -8,6 +8,7 @@ This module provides a class that:
 """
 
 import os
+import re
 from typing import Set, Optional, List, Tuple
 
 
@@ -398,6 +399,33 @@ class DefProcessor:
         val = float(value)
         n = round((val - 210) / 280)
         return int(280 * n + 210)
+
+    @staticmethod
+    def _uses_20_layer_tracks(def_path: str) -> bool:
+        """Return whether a placement DEF still has source metal13-metal20 tracks."""
+        with open(def_path, 'r') as infile:
+            for line in infile:
+                if line.lstrip().startswith('COMPONENTS'):
+                    break
+                match = re.match(r'^TRACKS\s+.*\sLAYER\s+metal(\d+)\s*;', line)
+                if match and int(match.group(1)) > 12:
+                    return True
+        return False
+
+    @staticmethod
+    def _convert_6plus6_track_line(line: str) -> Optional[str]:
+        """Map a source 10+10 TRACKS line to the retained 6+6 namespace."""
+        match = re.match(
+            r'^(TRACKS\s+.*\sLAYER\s+)metal(\d+)(\s*;[^\n]*(?:\n|$))', line
+        )
+        if not match:
+            return line
+        layer = int(match.group(2))
+        if 7 <= layer <= 14:
+            return None
+        if 15 <= layer <= 20:
+            layer -= 8
+        return f'{match.group(1)}metal{layer}{match.group(3)}'
     
     @staticmethod
     def def_post_process(
@@ -414,6 +442,7 @@ class DefProcessor:
         2. Change macro orientation to N (all_macro_names)
         3. Round FIXED macro (x,y) to routing tracks: x=380n+260, y=280n+210
         4. Add die suffixes: _upper for upper_die_macro_names, _bottom for others
+        5. Convert the source 10+10 TRACKS header to the retained 6+6 stack
         
         DEF format (two lines per component):
           - component_name macro_type [optional...]
@@ -444,6 +473,8 @@ class DefProcessor:
         pending_type: Optional[str] = None
         pending_indent: str = ''
         pending_rest: List[str] = []
+        convert_tracks = DefProcessor._uses_20_layer_tracks(input_def_path)
+        converted_track_count = 0
         
         with open(input_def_path, 'r') as infile, open(output_def_path, 'w') as outfile:
             for line in infile:
@@ -461,7 +492,14 @@ class DefProcessor:
                     continue
                 
                 if not in_components:
-                    outfile.write(line)
+                    if convert_tracks:
+                        converted_line = DefProcessor._convert_6plus6_track_line(line)
+                        if converted_line is not None:
+                            outfile.write(converted_line)
+                        if converted_line != line:
+                            converted_track_count += 1
+                    else:
+                        outfile.write(line)
                     continue
                 
                 fields = stripped.split()
@@ -536,6 +574,7 @@ class DefProcessor:
             'rounded_count': rounded_count,
             'upper_count': upper_count,
             'bottom_count': bottom_count,
+            'converted_track_count': converted_track_count,
         }
     
     @staticmethod
@@ -841,4 +880,3 @@ class DefProcessor:
         )
         
         return results
-

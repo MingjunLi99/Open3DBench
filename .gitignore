@@ -1,3 +1,9 @@
 Place-MoL/benchmarks/
 Place-LoL/benchmarks/
 OpenROAD-3D/flow/evaluation_pack/
+
+# Generated Place-MoL and OpenROAD artifacts
+/Place-MoL/results/
+/OpenROAD-3D/flow/evaluation_pack_custom/
+/OpenROAD-3D/flow/placement_exports/
+/OpenROAD-3D/flow/results/

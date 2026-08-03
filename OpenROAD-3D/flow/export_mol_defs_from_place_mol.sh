@@ -11,6 +11,8 @@ SOURCE_DIR=${2:-${DEFAULT_SOURCE_DIR}}
 PACK_ROOT=${3:-evaluation_pack_custom}
 TARGET_DIR="${SCRIPT_DIR}/${PACK_ROOT}/${METHOD}"
 
+python3 "${REPO_ROOT}/Place-MoL/scripts/convert_mol_defs_to_6plus6.py" "${SOURCE_DIR}"
+
 case "${METHOD}" in
   mol-analytical|mol-tiling)
     ;;
