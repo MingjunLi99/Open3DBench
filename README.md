@@ -145,6 +145,10 @@ for their discussions and help during the development of the new release.
 
 ## Local 6+6-Layer MoL Flow
 
+See [6LAYERS_MODIFICATIONS.md](6LAYERS_MODIFICATIONS.md) for the complete
+layer mapping, PDK and flow change inventory, runtime/export contracts,
+validation commands, known limitations, and maintenance checklist.
+
 This workspace variant retains six low metal layers on each die. The lower
 die uses `metal1`-`metal6`; source upper-die `metal15`-`metal20` is renumbered
 to `metal7`-`metal12`. The face-to-face interface is therefore
