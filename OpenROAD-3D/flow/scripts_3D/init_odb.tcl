@@ -6,3 +6,4 @@ foreach lef_file $all_lefs {
 }
 read_def $env(DEF_INPUT)
 write_db $env(RESULTS_DIR)/3D_out.odb
+write_verilog $env(RESULTS_DIR)/3D_out.v

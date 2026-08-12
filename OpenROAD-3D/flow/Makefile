@@ -697,6 +697,11 @@ do-autoflow:
 	$(OPENROAD_EXE) -exit scripts_3D/init_odb.tcl
 	$(UNSET_AND_MAKE) do-pre_cts
 
+.PHONY: do-mol-netlist
+do-mol-netlist:
+	mkdir -p $(RESULTS_DIR) $(LOG_DIR) $(REPORTS_DIR)
+	$(OPENROAD_EXE) -exit scripts_3D/init_odb.tcl
+
 
 .PHONY: do-place_macros
 do-place_macros:
