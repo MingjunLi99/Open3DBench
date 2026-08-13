@@ -12,3 +12,4 @@ fi
 
 cd "${bundle_dir}"
 sha256sum --check --strict SHA256SUMS
+echo "Release verification passed. No files were created or modified."

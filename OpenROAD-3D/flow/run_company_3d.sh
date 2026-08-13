@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 usage() {
-    echo "Usage: $0 <design> <top.def> <bottom.def> [--output DIR] [--hotspot]"
+    echo "Usage: $0 <design> <design_top.def> <design_bot.def> [--output DIR] [--hotspot]"
     echo "Designs: ariane bp swerv_wrapper tinyRocket"
 }
 

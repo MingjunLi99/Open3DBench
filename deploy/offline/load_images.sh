@@ -28,10 +28,6 @@ load_image() {
     case "${archive}" in
         *.tar.gz|*.tgz) gzip -dc "${archive}" | "${docker_cmd[@]}" load ;;
         *.tar) "${docker_cmd[@]}" load -i "${archive}" ;;
-        *.part-000)
-            part_prefix=${archive%000}
-            cat "${part_prefix}"* | "${docker_cmd[@]}" load
-            ;;
         *) echo "Unsupported image archive suffix: ${archive}" >&2; exit 2 ;;
     esac
 }

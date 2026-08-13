@@ -5,24 +5,24 @@ set -euo pipefail
 usage() {
     cat <<'EOF'
 Usage:
-  prepare_release.sh --mode eval|placer --output DIR \
-    --docker DOCKER_TGZ --eval-image EVAL_TAR \
-    [--place-image PLACE_TAR --benchmarks BENCHMARKS_TGZ --binaries BINARIES_TGZ] \
-    [--split-size 3800M]
+  prepare_release.sh --mode eval|placer [--output DIR] \
+    [--docker DOCKER_TGZ --eval-image EVAL_TAR] \
+    [--place-image PLACE_TAR --benchmarks BENCHMARKS_TGZ --binaries BINARIES_TGZ]
 
-The placer mode requires --place-image, --benchmarks and --binaries.
+By default, artifacts are read from offline-dist/{docker,images,data}.
 Run after committing the deployment branch; source archives are generated from HEAD.
 EOF
 }
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 mode=
 output_dir=
-docker_archive=
-eval_image=
+docker_archive="$REPO_ROOT/offline-dist/docker/docker-26.1.4.tgz"
+eval_image="$REPO_ROOT/offline-dist/images/open3dbench-eval.docker.tar"
 place_image=
-benchmarks_archive=
-binaries_archive=
-split_size=
+benchmarks_archive="$REPO_ROOT/offline-dist/data/benchmarks_lol.tar.gz"
+binaries_archive="$REPO_ROOT/offline-dist/data/binaries.tar.gz"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -33,7 +33,6 @@ while [[ $# -gt 0 ]]; do
         --place-image) place_image=${2:-}; shift 2 ;;
         --benchmarks) benchmarks_archive=${2:-}; shift 2 ;;
         --binaries) binaries_archive=${2:-}; shift 2 ;;
-        --split-size) split_size=${2:-}; shift 2 ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown argument: $1" >&2; usage >&2; exit 2 ;;
     esac
@@ -43,17 +42,25 @@ if [[ "$mode" != eval && "$mode" != placer ]]; then
     echo "--mode must be eval or placer" >&2
     exit 2
 fi
+if [[ -z "$output_dir" ]]; then
+    if [[ "$mode" == eval ]]; then
+        output_dir="$REPO_ROOT/offline-dist/releases/Open3DBench-eval-only"
+    else
+        output_dir="$REPO_ROOT/offline-dist/releases/Open3DBench-placer-complete"
+    fi
+fi
 for value in "$output_dir" "$docker_archive" "$eval_image"; do
     [[ -n "$value" ]] || { usage >&2; exit 2; }
 done
 if [[ "$mode" == placer ]]; then
+    if [[ -z "$place_image" ]]; then
+        place_image="$REPO_ROOT/offline-dist/images/open3dbench-place.docker.tar"
+    fi
     for value in "$place_image" "$benchmarks_archive" "$binaries_archive"; do
         [[ -n "$value" ]] || { echo "placer mode requires place image, benchmarks and binaries" >&2; exit 2; }
     done
 fi
 
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 if [[ -n "$(git -C "$REPO_ROOT" status --porcelain)" ]]; then
     echo "Working tree is not clean. Commit the deployment changes before packaging." >&2
     git -C "$REPO_ROOT" status --short >&2
@@ -72,6 +79,11 @@ copy_artifact() {
     local source=$1
     local destination=$2
     require_file "$source"
+    [[ "$source" != *.part-* ]] || {
+        echo "Split archive is not accepted by prepare_release.sh: $source" >&2
+        echo "Use the complete archive; ExFAT does not require file splitting." >&2
+        exit 1
+    }
     cp -p "$source" "$destination"
 }
 
@@ -97,19 +109,13 @@ Open3DBench offline release
 Mode: $mode
 Commit: $commit
 Created: $(date -u '+%Y-%m-%dT%H:%M:%SZ')
-Split size: ${split_size:-none}
 EOF
-
-if [[ -n "$split_size" ]]; then
-    mapfile -d '' large_files < <(find "$output_dir" -type f -size +"$split_size" -print0)
-    for file in "${large_files[@]}"; do
-        split -b "$split_size" -d -a 3 "$file" "${file}.part-"
-        rm "$file"
-    done
-fi
 
 (
     cd "$output_dir"
     find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
 )
 echo "Offline release prepared at: $output_dir"
+echo "This is a self-contained release directory, not a single compressed file."
+echo "Verify it with: bash $SCRIPT_DIR/verify_bundle.sh $output_dir"
+echo "After verification, copy the entire directory to the ExFAT USB drive."

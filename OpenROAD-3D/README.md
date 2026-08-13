@@ -25,7 +25,7 @@ cd OpenROAD-3D
 
 That script is the shared evaluation entry point for both LoL and MoL. It mounts `OpenROAD-3D` and `Place-LoL` separately and exports `PLACE_LOL_ROOT=/workspace/Place-LoL` inside the container, so the LoL configs can read DEFs from `Place-LoL/binaries/converted_output/...`.
 
-For an external/company placer that emits separate top and bottom DEFs, Place-LoL is optional. Start the eval container with `COMPANY_PLACER_OUTPUTS=/path/to/def-root`, then run `flow/run_company_3d.sh`. The script converts `HBT[n]` pins and feeds the merged DEF into the existing backend flow.
+For an external/company placer that emits separate top and bottom DEFs, Place-LoL is optional. Start the eval container with `COMPANY_PLACER_OUTPUTS` pointing to the directory containing `<design>_top.def` and `<design>_bot.def`, then run `flow/run_company_3d.sh`. The script converts `HBT[n]` pins and feeds the merged DEF into the existing backend flow.
 
 ## Layout
 

@@ -2,6 +2,60 @@
 
 本文件记录 `huawei-partition` 分支针对公司离线环境和公司 3D placer 的适配。后续提交按时间倒序追加，记录行为变化、兼容性影响、验证结果和遗留事项；不要在此写入公司 URL、账号、token、license server、内部 PDK 路径或专有 DEF 内容。
 
+## 2026-08-13：简化 ExFAT 离线发布与公司目录约定
+
+### 变更范围
+
+- 基于上次提交 `b1246b74`（`support deploy to CentOS7.9 WSL, and conversion parser for OpenROAD-style 2 separate die DEFs to 1 Open3DBench-style double-metal stacking DEF`）。
+- 本次提交只调整离线 release 制备、校验、传输文档和公司 DEF 示例路径；不改变双 DEF 转换算法、HBT 建模或 OpenROAD backend 主流程。
+
+### Release 制备与大文件处理
+
+- 简化 `deploy/offline/prepare_release.sh`：
+  - eval-only 默认读取 `offline-dist/docker/docker-26.1.4.tgz` 和 `offline-dist/images/open3dbench-eval.docker.tar`；
+  - placer-complete 额外默认读取完整的 `open3dbench-place.docker.tar`、`benchmarks_lol.tar.gz` 和 `binaries.tar.gz`；
+  - 默认输出分别固定为 `offline-dist/releases/Open3DBench-eval-only` 和 `offline-dist/releases/Open3DBench-placer-complete`；
+  - 移除 `--split-size` 和 release 自动分卷逻辑；输入必须是完整 archive；
+  - 输出为可整体复制到 ExFAT U 盘的自包含 release 目录，而不是单个总压缩包；
+  - 完成时打印输出目录、校验命令和 U 盘复制提示；
+  - 保持发布保护：源码从当前 `HEAD` 导出，working tree 包含已修改或未跟踪文件时拒绝制备。
+- 已将历史 place image 分卷重组为完整 `offline-dist/images/open3dbench-place.docker.tar`；该大文件继续由 `.gitignore` 排除，不进入源码提交。
+- 删除仅用于历史分卷重组的 `deploy/offline/assemble_parts.sh`。
+- 移除 `deploy/offline/load_images.sh` 对 `.part-000` 的流式加载支持，只接受完整 `.tar`、`.tar.gz` 或 `.tgz` image archive。
+- `deploy/offline/verify_bundle.sh` 校验成功后明确提示不会生成或修改文件。
+
+### 部署、传输和 CodeHub 文档
+
+- 重写并细化 `deploy/offline/README.zh-CN.md` 的三部分操作：
+  - Ubuntu WSL 制备 eval-only 或 placer-complete release；
+  - 公司 CentOS 7.9 WSL2 安装 Docker、加载 eval image、转换公司 DEF并运行 backend evaluation；
+  - 公司 Windows 11 使用普通 Git 和 Git LFS 同步源码与离线制品到 CodeHub。
+- 明确当前 Ubuntu WSL 只打包现成 Docker image archive 时不需要安装 Docker；仅在重新 pull/save 镜像或本机运行容器测试时需要容器运行时。
+- 修正 `offline-dist/SHA256SUMS` 的相对路径校验方式：从仓库根目录使用 `verify_bundle.sh offline-dist`，或进入 `offline-dist` 后执行 `sha256sum --check`。
+- 公司 WSL release 示例位置改为 `/mnt/d/Wrokspace/Open3DBench-eval-only`，WSL ext4 工作区统一改为 `/root/Workspace`。
+- 增加将完整 release 目录封装为不分卷 ZIP64 单文件的可选命令：使用 store 模式避免重复压缩，便于 SCP 和 ExFAT U 盘传输，并给出 CentOS WSL、Windows 11 和 7-Zip 解压说明。
+- CodeHub LFS 示例不再跟踪 `*.part-*`，完整 `.tar`、`.tar.gz`、`.tgz` 和 `.bundle` 由 LFS 管理。
+
+### 公司 placer 输出约定
+
+- 公司 DEF 示例目录改为 `/root/Workspace/freePartitioner/output_openroad`。
+- 采用扁平命名 `<design>_top.def` 和 `<design>_bot.def`，例如 `swerv_wrapper_top.def`、`swerv_wrapper_bot.def`。
+- 更新 `OpenROAD-3D/README.md`、`run_company_3d.sh` usage、容器挂载、独立转换和 backend evaluation 示例。
+- 转换器本身通过显式 `--top`/`--bottom` 参数接收任意路径，因此无需修改转换逻辑。
+
+### 验证
+
+- 完整 place Docker archive 可正常读取，SHA256 为 `10c21ac2eb138e3e152973150158f81b6527ffea2586b1bbc350a7496cb202e8`。
+- `offline-dist` 中 Docker 静态包、eval/place image 和 LoL 数据通过统一 `SHA256SUMS` 校验；这些制品不进入 Git 提交。
+- ZIP 命令使用当前 Ubuntu WSL 的 Info-ZIP 3.0 完成小型目录创建和 `unzip -t` 回归测试。
+- 修改后的 shell 脚本通过 `bash -n`，文档和代码通过 `git diff --check`。
+
+### 兼容性说明
+
+- 新 release 不兼容 `.part-*` 输入；若其他环境仍保存旧分卷，需在升级前自行重组为完整 archive。
+- Windows 自带文件管理器或 `Expand-Archive` 对超大 ZIP64 的支持可能受系统版本影响，失败时使用 7-Zip。
+- CodeHub 的 LFS 单文件大小、仓库配额、push 超时和权限策略仍需在公司环境确认。
+
 ## 2026-08-13：首次离线 backend 适配
 
 ### 目标
