@@ -167,6 +167,47 @@ Open3DBench-eval-only/
 
 backend source tar 和 bundle 都只含 `OpenROAD-3D`、离线部署脚本和文档，不含 `Place-LoL`/`Place-MoL`。其中 bundle 是从当前 upstream commit 导出的 backend-only 源码创建的单提交快照，分支名为 `huawei-partition`；它保留精简源码的 Git 文件模式和内容，但不包含原 Open3DBench 的完整提交历史。原始 commit ID 记录在 `BACKEND_SOURCE_MANIFEST.txt` 和快照 commit message 中。
 
+注意：`deploy/offline/` 不会作为独立目录出现在 release 根目录下，而是位于 backend source tar（以及 backend bundle）内部。backend tar 解压后的主要结构如下；`<commit>` 是制备时的 upstream commit：
+
+```text
+Open3DBench-backend-<commit>.tar.gz
+├── README.md
+├── COMPANY_DEPLOY_CHANGELOG.md
+├── .gitattributes
+├── .gitignore
+├── deploy/
+│   └── offline/
+│       ├── README.zh-CN.md
+│       ├── install_docker_static.sh
+│       ├── start_docker_wsl.sh
+│       ├── load_images.sh
+│       ├── verify_host.sh
+│       ├── verify_bundle.sh
+│       ├── prepare_release.sh
+│       ├── make_backend_source_bundle.sh
+│       ├── make_source_bundle.sh
+│       ├── deploy_lol_data.sh
+│       └── smoke_test_place_lol.sh
+└── OpenROAD-3D/
+    ├── start_docker_eval.sh
+    └── flow/
+        ├── run_company_3d.sh
+        ├── util/convert_company_3d_def.py
+        ├── designs/nangate45_3D/
+        │   ├── ariane133/config_company.mk
+        │   ├── black_parrot/config_company.mk
+        │   ├── swerv_wrapper/config_company.mk
+        │   └── tinyRocket/config_company.mk
+        └── ...（OpenROAD-3D backend、平台和设计文件）
+```
+
+backend tar 不带顶层目录，解压时应指定目标目录 `/root/Workspace/Open3DBench`；因此上面列出的 `deploy/offline/verify_host.sh` 解压后路径就是 `/root/Workspace/Open3DBench/deploy/offline/verify_host.sh`。如需在制备机查看归档内容而不解压，可执行：
+
+```bash
+tar -tzf offline-dist/releases/Open3DBench-eval-only/source/Open3DBench-backend-<commit>.tar.gz \
+  | sed -n '1,40p'
+```
+
 ### 1.3 制备 placer-complete 包
 
 当前工程已经准备了完整的 place 镜像和 LoL 数据，直接执行：
@@ -196,6 +237,29 @@ offline-dist/data/binaries.tar.gz
 `prepare_release.sh` 不再执行分卷或压缩；它要求输入 archive 是完整文件，并直接复制到 release。ExFAT U 盘可以直接保存这些大文件。
 
 该包的 `source/` 同时包含完整源码 tar 和 Git bundle；`data/` 包含 LoL benchmark/binary archive；`images/` 包含 eval/place 两个镜像。
+
+placer-complete 的完整源码归档内容与 backend-only 归档不同：它保留原仓库顶层目录和完整 Place 组件，归档内主要结构如下：
+
+```text
+Open3DBench-<commit>.tar.gz
+└── Open3DBench-<commit>/
+    ├── README.md
+    ├── COMPANY_DEPLOY_CHANGELOG.md
+    ├── deploy/offline/
+    │   ├── README.zh-CN.md
+    │   └── ...（离线部署脚本）
+    ├── OpenROAD-3D/
+    ├── Place-LoL/
+    ├── Place-MoL/
+    └── ...（其余完整源码）
+```
+
+因此，eval-only 和 placer-complete 的 release 根目录都只放 `source/`、`docker/`、`images/`（以及 placer 模式的 `data/`）和校验清单；必须先解压 source tar 或 clone 对应 bundle，才能执行 `deploy/offline/*.sh`。可在制备机查看完整归档树：
+
+```bash
+tar -tzf offline-dist/releases/Open3DBench-placer-complete/source/Open3DBench-<commit>.tar.gz \
+  | sed -n '1,40p'
+```
 
 ### 1.4 在制备机验证并转移
 

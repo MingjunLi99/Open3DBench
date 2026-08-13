@@ -29,6 +29,12 @@
 - clone 后抽查公司评估入口和离线部署脚本的 Git 文件模式为 `100755`。
 - 文档和脚本修改通过 `git diff --check`。
 
+### Release 归档结构说明补充
+
+- README 增加 eval-only backend tar/bundle 内部文件树，明确 `deploy/offline/` 位于源码归档内部，而不是 release 根目录。
+- 增加 placer-complete 完整源码归档的顶层目录和 `Place-LoL`/`Place-MoL` 结构示意。
+- 说明两种 release 都必须先解压源码 tar 或 clone bundle，之后才能执行 `deploy/offline/*.sh`；补充不解压查看 tar 内容的命令。
+
 ## 2026-08-13：简化 ExFAT 离线发布与公司目录约定
 
 ### 变更范围
