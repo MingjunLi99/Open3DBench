@@ -339,12 +339,12 @@ Expand-Archive .\Open3DBench-eval-only.zip -DestinationPath .\Open3DBench-eval-o
 
 ## 第二部分：在公司 CentOS WSL 部署并评估
 
-以下以 release 位于 `/mnt/d/Wrokspace/Open3DBench-eval-only` 为例。最终源码和运行目录应位于 WSL ext4，例如 `/root/Workspace`，不要直接在 `/mnt/d` 上运行 OpenROAD。
+以下以 release 位于 `/mnt/d/Workspace/Open3DBench-eval-only` 为例。最终源码和运行目录应位于 WSL ext4，例如 `/root/Workspace`，不要直接在 `/mnt/d` 上运行 OpenROAD。
 
 ### 2.1 验证 release
 
 ```bash
-RELEASE=/mnt/d/Wrokspace/Open3DBench-eval-only
+RELEASE=/mnt/d/Workspace/Open3DBench-eval-only
 cd "$RELEASE"
 sha256sum --check --strict SHA256SUMS
 cat RELEASE_MANIFEST.txt
@@ -550,10 +550,10 @@ OpenROAD-3D/flow/reports/nangate45_3D/<design>/company/
 
 推荐使用 release 中的 Git bundle。它已经包含 Git 元数据，无需先解压 `source/*.tar.gz`，而且 `git clone` 本地 bundle 不会连接 GitHub 或其他公网。
 
-下面以收到 `Open3DBench-eval-only.zip`、并将它放在 `D:\Wrokspace` 为例。先解开外层 release ZIP；超大 ZIP64 如果无法被 `Expand-Archive` 处理，请在相同位置使用 7-Zip 解压：
+下面以收到 `Open3DBench-eval-only.zip`、并将它放在 `D:\Workspace` 为例。先解开外层 release ZIP；超大 ZIP64 如果无法被 `Expand-Archive` 处理，请在相同位置使用 7-Zip 解压：
 
 ```powershell
-Set-Location D:\Wrokspace
+Set-Location D:\Workspace
 Expand-Archive .\Open3DBench-eval-only.zip `
   -DestinationPath .\Open3DBench-eval-only-release
 
@@ -600,7 +600,7 @@ $Bundle = Get-ChildItem `
 只有 bundle 无法验证或克隆时，才建议使用 backend-only tar 重建精简源码 repo。Windows 解压由 Ubuntu 生成的 tar 通常不会发生 `/`、`\` 或 shell 转义问题；主要注意 Git for Windows 的 CRLF 设置和 NTFS 不保留 POSIX executable bit。项目 `.gitattributes` 已要求 `.sh`、`.py`、`.tcl` 和 `Makefile` 使用 LF，但 tar 重建 repo 时仍需显式恢复脚本的 Git 文件模式：
 
 ```powershell
-Set-Location D:\Wrokspace
+Set-Location D:\Workspace
 $ReleaseRoot = Resolve-Path `
   .\Open3DBench-eval-only-release\Open3DBench-eval-only
 $SourceTar = Get-ChildItem `
