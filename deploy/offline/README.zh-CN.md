@@ -130,7 +130,8 @@ Open3DBench/offline-dist/releases/Open3DBench-eval-only/
 
 目录中的文件类型分别是：
 
-- `source/Open3DBench-backend-<commit>.tar.gz`：已压缩的 backend-only 源码包；
+- `source/Open3DBench-backend-<commit>.tar.gz`：供 CentOS WSL 直接解压部署的 backend-only 源码包；
+- `source/Open3DBench-backend-<commit>.bundle`：供 Win11 本地克隆并推送 CodeHub 的 backend-only Git 快照；
 - `docker/docker-26.1.4.tgz`：Docker 静态二进制压缩包；
 - `images/open3dbench-eval.docker.tar`：未再次压缩的 Docker image archive；
 - `RELEASE_MANIFEST.txt`：release 模式、源码 commit 和生成时间；
@@ -159,11 +160,12 @@ Open3DBench-eval-only/
 │   └── open3dbench-eval.docker.tar
 └── source/
     ├── Open3DBench-backend-<commit>.tar.gz
+    ├── Open3DBench-backend-<commit>.bundle
     ├── BACKEND_SOURCE_MANIFEST.txt
     └── BACKEND_SOURCE_SHA256SUMS
 ```
 
-backend source tar 只含 `OpenROAD-3D`、离线部署脚本和文档，不含 `Place-LoL`/`Place-MoL`。
+backend source tar 和 bundle 都只含 `OpenROAD-3D`、离线部署脚本和文档，不含 `Place-LoL`/`Place-MoL`。其中 bundle 是从当前 upstream commit 导出的 backend-only 源码创建的单提交快照，分支名为 `huawei-partition`；它保留精简源码的 Git 文件模式和内容，但不包含原 Open3DBench 的完整提交历史。原始 commit ID 记录在 `BACKEND_SOURCE_MANIFEST.txt` 和快照 commit message 中。
 
 ### 1.3 制备 placer-complete 包
 
@@ -313,14 +315,22 @@ SOURCE_DIR=$(find /root/Workspace -maxdepth 1 -type d \
 mv "$SOURCE_DIR" /root/Workspace/Open3DBench
 ```
 
-如果希望在公司 WSL 保留完整 Git 历史，可以改用 bundle：
+eval-only 也可以不用 tar，而从 backend-only bundle 创建带 Git 元数据的单提交快照工作区：
 
 ```bash
 BUNDLE=$(find "$RELEASE/source" -maxdepth 1 -type f \
-  -name 'Open3DBench-*.bundle' -print -quit)
-git clone "$BUNDLE" /root/Workspace/Open3DBench
-cd /root/Workspace/Open3DBench
-git switch huawei-partition
+  -name 'Open3DBench-backend-*.bundle' -print -quit)
+git clone --branch huawei-partition \
+  "$BUNDLE" /root/Workspace/Open3DBench
+```
+
+如果使用 placer-complete 且希望保留原仓库完整 Git 历史，则改为选择非 backend 的完整 bundle：
+
+```bash
+BUNDLE=$(find "$RELEASE/source" -maxdepth 1 -type f \
+  -name 'Open3DBench-*.bundle' ! -name '*-backend-*' -print -quit)
+git clone --branch huawei-partition \
+  "$BUNDLE" /root/Workspace/Open3DBench
 ```
 
 ### 2.3 检查公司 WSL
@@ -474,37 +484,95 @@ OpenROAD-3D/flow/reports/nangate45_3D/<design>/company/
 
 ### 3.2 上传源码 repo
 
-如果 Win11 收到的是完整 Git bundle：
+推荐使用 release 中的 Git bundle。它已经包含 Git 元数据，无需先解压 `source/*.tar.gz`，而且 `git clone` 本地 bundle 不会连接 GitHub 或其他公网。
+
+下面以收到 `Open3DBench-eval-only.zip`、并将它放在 `D:\Wrokspace` 为例。先解开外层 release ZIP；超大 ZIP64 如果无法被 `Expand-Archive` 处理，请在相同位置使用 7-Zip 解压：
 
 ```powershell
-$Bundle = Get-ChildItem .\Open3DBench-*.bundle | Select-Object -First 1
-git clone $Bundle.FullName Open3DBench-company
+Set-Location D:\Wrokspace
+Expand-Archive .\Open3DBench-eval-only.zip `
+  -DestinationPath .\Open3DBench-eval-only-release
+
+$ReleaseRoot = Resolve-Path `
+  .\Open3DBench-eval-only-release\Open3DBench-eval-only
+$Bundle = Get-ChildItem `
+  "$ReleaseRoot\source\Open3DBench-backend-*.bundle" |
+  Select-Object -First 1
+
+# list-heads 可在普通目录中运行，用于确认 bundle 可读且包含目标分支
+git bundle list-heads $Bundle.FullName
+git clone --branch huawei-partition `
+  $Bundle.FullName .\Open3DBench-company
 Set-Location .\Open3DBench-company
+
+# verify 需要在一个现有 Git 仓库中运行，因此放在 clone 之后
+git bundle verify $Bundle.FullName
+git branch --show-current
+git log --oneline -1
+git status
+git ls-files --stage `
+  deploy/offline/verify_host.sh `
+  OpenROAD-3D/start_docker_eval.sh `
+  OpenROAD-3D/flow/run_company_3d.sh
+```
+
+`list-heads` 应列出 `refs/heads/huawei-partition`，clone 后当前分支也应为 `huawei-partition`，上述 shell 脚本在 Git index 中应显示 `100755`。这里显式使用 `--branch huawei-partition`，因为仅包含分支 ref 的 bundle 不一定记录远端默认 HEAD；省略该参数可能得到 `remote HEAD refers to nonexistent ref`。Windows 工作区自身不使用 POSIX executable bit，但 bundle 中的 Git index 模式会在 push 到 CodeHub 后保留下来。确认无误后替换 CodeHub URL 并推送：
+
+```powershell
 git remote remove origin
 git remote add origin <CODEHUB_SOURCE_REPO_URL>
 git push -u origin huawei-partition
 ```
 
-如果使用 backend-only tar，希望建立精简源码 repo：
+这里的 eval-only bundle 是 backend-only 单提交快照，不包含原 Open3DBench 完整历史。如果使用 placer-complete release，并希望将完整仓库历史推到 CodeHub，则将上述 release 名改为 `Open3DBench-placer-complete`，并查找：
 
 ```powershell
-New-Item -ItemType Directory Open3DBench-company
-$SourceTar = Get-ChildItem .\Open3DBench-backend-*.tar.gz | Select-Object -First 1
+$Bundle = Get-ChildItem `
+  "$ReleaseRoot\source\Open3DBench-*.bundle" |
+  Where-Object { $_.Name -notlike "Open3DBench-backend-*" } |
+  Select-Object -First 1
+```
+
+只有 bundle 无法验证或克隆时，才建议使用 backend-only tar 重建精简源码 repo。Windows 解压由 Ubuntu 生成的 tar 通常不会发生 `/`、`\` 或 shell 转义问题；主要注意 Git for Windows 的 CRLF 设置和 NTFS 不保留 POSIX executable bit。项目 `.gitattributes` 已要求 `.sh`、`.py`、`.tcl` 和 `Makefile` 使用 LF，但 tar 重建 repo 时仍需显式恢复脚本的 Git 文件模式：
+
+```powershell
+Set-Location D:\Wrokspace
+$ReleaseRoot = Resolve-Path `
+  .\Open3DBench-eval-only-release\Open3DBench-eval-only
+$SourceTar = Get-ChildItem `
+  "$ReleaseRoot\source\Open3DBench-backend-*.tar.gz" |
+  Select-Object -First 1
+
+New-Item -ItemType Directory .\Open3DBench-company
 tar -xzf $SourceTar.FullName -C .\Open3DBench-company
 Set-Location .\Open3DBench-company
-git init -b huawei-partition
+git init
+git switch -c huawei-partition
 git add .
+
+git update-index --chmod=+x `
+  OpenROAD-3D/start_docker_eval.sh `
+  OpenROAD-3D/flow/run_company_3d.sh `
+  deploy/offline/deploy_lol_data.sh `
+  deploy/offline/install_docker_static.sh `
+  deploy/offline/load_images.sh `
+  deploy/offline/make_backend_source_bundle.sh `
+  deploy/offline/prepare_release.sh `
+  deploy/offline/smoke_test_place_lol.sh `
+  deploy/offline/start_docker_wsl.sh `
+  deploy/offline/verify_bundle.sh `
+  deploy/offline/verify_host.sh
+
+git ls-files --stage `
+  deploy/offline/verify_host.sh `
+  OpenROAD-3D/start_docker_eval.sh `
+  OpenROAD-3D/flow/run_company_3d.sh
 git commit -m "Adapt Open3DBench backend for company offline deployment"
 git remote add origin <CODEHUB_SOURCE_REPO_URL>
 git push -u origin huawei-partition
 ```
 
-若公司 Git 版本不支持 `git init -b`，使用：
-
-```powershell
-git init
-git switch -c huawei-partition
-```
+提交前确认检查的脚本均显示 `100755`。如果公司 Git 版本不支持 `git switch -c`，可改用 `git checkout -b huawei-partition`。
 
 ### 3.3 上传离线制品 repo（Git LFS）
 

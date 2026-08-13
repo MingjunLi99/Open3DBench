@@ -2,6 +2,33 @@
 
 本文件记录 `huawei-partition` 分支针对公司离线环境和公司 3D placer 的适配。后续提交按时间倒序追加，记录行为变化、兼容性影响、验证结果和遗留事项；不要在此写入公司 URL、账号、token、license server、内部 PDK 路径或专有 DEF 内容。
 
+## 2026-08-13：为 backend-only release 增加离线 Git bundle
+
+### 源码双载体
+
+- `deploy/offline/make_backend_source_bundle.sh` 现在同时生成两个 backend-only 源码载体：
+  - `.tar.gz` 供公司 CentOS WSL 直接解压部署；
+  - `.bundle` 供公司 Win11 从本地克隆、验证后推送到 CodeHub。
+- backend Git bundle 是由当前 upstream commit 导出的精简源码创建的 `huawei-partition` 单提交快照，不含 `Place-LoL`、`Place-MoL` 或原仓库完整历史。
+- `BACKEND_SOURCE_MANIFEST.txt` 记录 upstream commit、bundle 分支和单提交快照属性；`BACKEND_SOURCE_SHA256SUMS` 同时校验 tar 与 bundle。
+- bundle 在 Linux 制备机创建，保留 shell 脚本的 Git executable bit；项目 `.gitattributes` 继续保证 `.sh`、`.py`、`.tcl` 和 `Makefile` 使用 LF。
+
+### Win11 与 CodeHub 文档
+
+- 明确先解压外层 release ZIP，再从 `source/` 定位 backend-only bundle；无需解压 source tar 或访问 GitHub。
+- 增加 `git bundle list-heads`、本地 clone、clone 后 `git bundle verify`、分支/commit/status 检查以及关键脚本 `100755` 模式检查。
+- clone 时显式指定 `--branch huawei-partition`，避免 bundle 未记录默认 HEAD 时落入空的 `master` 分支。
+- 说明 clone 后的 `origin` 指向本地 bundle，推送 CodeHub 前应将其替换为公司远程 URL。
+- 区分 eval-only 单提交快照 bundle 和 placer-complete 完整历史 bundle。
+- 将 Win11 解压 backend tar 后重建 repo 降为备用方案，并补充 LF、NTFS executable bit 风险和显式 `git update-index --chmod=+x` 恢复步骤。
+
+### 验证
+
+- `make_backend_source_bundle.sh` 和 `prepare_release.sh` 通过 shell 语法检查。
+- backend bundle 通过 `git bundle verify`，可在无网络临时目录中 clone 为 `huawei-partition`。
+- clone 后抽查公司评估入口和离线部署脚本的 Git 文件模式为 `100755`。
+- 文档和脚本修改通过 `git diff --check`。
+
 ## 2026-08-13：简化 ExFAT 离线发布与公司目录约定
 
 ### 变更范围

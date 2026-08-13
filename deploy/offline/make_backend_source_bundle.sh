@@ -23,11 +23,34 @@ git -C "$repo_root" archive --format=tar HEAD | tar -x -C "$tmp_dir"
 rm -rf "$tmp_dir/Place-LoL" "$tmp_dir/Place-MoL"
 
 tar -C "$tmp_dir" -czf "$output_dir/Open3DBench-backend-${commit}.tar.gz" .
+
+# Build a small, self-contained Git repository from the backend-only tree.
+# Creating it on Linux preserves executable bits for shell scripts when the
+# bundle is later cloned on Windows and pushed to CodeHub.
+git -C "$tmp_dir" init -q
+git -C "$tmp_dir" checkout -q -b huawei-partition
+git -C "$tmp_dir" add .
+GIT_AUTHOR_NAME="Open3DBench Offline Builder" \
+GIT_AUTHOR_EMAIL="offline-builder@localhost" \
+GIT_COMMITTER_NAME="Open3DBench Offline Builder" \
+GIT_COMMITTER_EMAIL="offline-builder@localhost" \
+    git -C "$tmp_dir" commit -q -m "Backend-only snapshot from Open3DBench ${commit}"
+git -C "$tmp_dir" bundle create "$output_dir/Open3DBench-backend-${commit}.bundle" huawei-partition
+
 cat > "$output_dir/BACKEND_SOURCE_MANIFEST.txt" <<EOF
 Open3DBench backend-only source bundle
-Commit: ${commit}
+Upstream commit: ${commit}
 Excluded: Place-LoL, Place-MoL, LoL placer data and place image
 Included: OpenROAD-3D, deploy/offline and repository documentation
+Tar archive: deploy directly in CentOS WSL
+Git bundle: backend-only single-commit snapshot for cloning on Windows and pushing to CodeHub
+Git bundle branch: huawei-partition
 EOF
-(cd "$output_dir" && sha256sum "Open3DBench-backend-${commit}.tar.gz" > BACKEND_SOURCE_SHA256SUMS)
-echo "Backend-only source bundle created: $output_dir/Open3DBench-backend-${commit}.tar.gz"
+(
+    cd "$output_dir"
+    sha256sum \
+        "Open3DBench-backend-${commit}.tar.gz" \
+        "Open3DBench-backend-${commit}.bundle" \
+        > BACKEND_SOURCE_SHA256SUMS
+)
+echo "Backend-only tar and Git bundle created under: $output_dir"
