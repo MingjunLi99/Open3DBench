@@ -1,60 +1,90 @@
+"""Split a merged Open3DBench DEF into upper/bottom legalization DEFs."""
+
 import os
-import pdb
-
-try:
-    results_dir = os.environ['RESULTS_DIR']
-    print(f"Results directory is located at: {results_dir}")
-except KeyError:
-    print("ERROR: RESULTS_DIR environment variable is not set.")
+import re
+from pathlib import Path
 
 
-gp_out_file = f"{results_dir}/4_1_cts.def"
-
-upper_def = ''
-bottom_def = ''
-with open(gp_out_file, 'r', encoding='utf-8') as def_file:
-        part = False
-        indicator = False
-        net_part = False
-        for line in def_file:
-            if 'COMPONENTS' in line:
-                part = True
-            if 'END' in line:
-                part = False
-            if 'NETS' in line:
-                net_part = True
+SECTION_RE = re.compile(r"^(\s*)(COMPONENTS|PINS|NETS)\s+(\d+)")
+END_RE = re.compile(r"^\s*END\s+(COMPONENTS|PINS|NETS)")
+ENTRY_RE = re.compile(r"^\s*-\s+(\S+)")
 
 
-            if part:
-                if ('PLACED' not in line) or ('FIXED' not in line):
-                    class_name = line.split()[2]
-                    # print(class_name)
-                    if 'bottom' in class_name:
-                        indicator = 'bottom'
-                    elif 'upper' in class_name:
-                        indicator = 'upper'
-                    
-            else:
-                if net_part:
-                    indicator = None
-                else:
-                    indicator = 'all'
-            if indicator == 'bottom':
-                if 'TAPCELL' not in line:
-                    bottom_def += line
-            if indicator == 'upper':
-                if 'TAPCELL' not in line:
-                    upper_def += line
-            if indicator == 'all':
-                if 'HBT_TOPIN' not in line and 'HBT_BOTIN' not in line:
-                    bottom_def += line
-                    upper_def += line
-            if 'END NETS' in line:
-                net_part = False
+def section_entries(lines, name):
+    start = end = None
+    for i, line in enumerate(lines):
+        m = SECTION_RE.match(line)
+        if m and m.group(2) == name:
+            start = i
+        m = END_RE.match(line)
+        if m and m.group(1) == name and start is not None:
+            end = i
+            break
+    if start is None or end is None:
+        return None, None, []
+    entries = []
+    current = []
+    for line in lines[start + 1 : end]:
+        if ENTRY_RE.match(line):
+            if current:
+                entries.append(current)
+            current = [line]
+        elif current:
+            current.append(line)
+    if current:
+        entries.append(current)
+    return start, end, entries
 
-# pdb.set_trace()
-with open(f"{results_dir}/upper.def", 'w', encoding='utf-8') as def_file:
-    def_file.write(upper_def)
 
-with open(f"{results_dir}/bottom.def", 'w', encoding='utf-8') as def_file:
-    def_file.write(bottom_def)
+def entry_name(entry):
+    return ENTRY_RE.match(entry[0]).group(1)
+
+
+def render(name, entries):
+    out = [f"{name} {len(entries)} ;"]
+    for entry in entries:
+        out.extend(entry)
+    out.append(f"END {name}")
+    return out
+
+
+def write_side(lines, side, output: Path):
+    comp_start, comp_end, components = section_entries(lines, "COMPONENTS")
+    net_start, net_end, nets = section_entries(lines, "NETS")
+    pin_start, pin_end, pins = section_entries(lines, "PINS")
+    if comp_start is None or net_start is None:
+        raise RuntimeError("4_1_cts.def must contain COMPONENTS and NETS")
+    marker = "_upper" if side == "upper" else "_bottom"
+    net_marker = "_TOP" if side == "upper" else "_BOT"
+    side_components = [e for e in components if len(e[0].split()) > 2 and marker in e[0].split()[2]]
+    side_nets = [e for e in nets if entry_name(e).endswith(net_marker)]
+    side_pins = [e for e in pins if any(net_marker in line for line in e)]
+
+    out = []
+    i = 0
+    while i < len(lines):
+        if i == comp_start:
+            out.extend(render("COMPONENTS", side_components))
+            i = comp_end + 1
+        elif i == net_start:
+            out.extend(render("NETS", side_nets))
+            i = net_end + 1
+        elif pin_start is not None and i == pin_start:
+            out.extend(render("PINS", side_pins))
+            i = pin_end + 1
+        else:
+            out.append(lines[i])
+            i += 1
+    output.write_text("\n".join(out) + "\n", encoding="utf-8")
+
+
+def main():
+    results_dir = os.environ["RESULTS_DIR"]
+    source = os.path.join(results_dir, "4_1_cts.def")
+    lines = open(source, encoding="utf-8").read().splitlines()
+    write_side(lines, "upper", Path(results_dir) / "upper.def")
+    write_side(lines, "bottom", Path(results_dir) / "bottom.def")
+
+
+if __name__ == "__main__":
+    main()

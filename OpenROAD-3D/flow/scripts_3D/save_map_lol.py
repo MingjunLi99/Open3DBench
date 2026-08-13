@@ -1,39 +1,38 @@
-import pickle
 import os
-
-design_dir = os.environ['DESIGN_DIR']
-method = os.environ['METHOD']
-design_nickname = os.environ['DESIGN_NICKNAME']
-results_dir = os.environ['RESULTS_DIR']
+import pickle
+import re
 
 
-gp_out_file = os.environ['INPUT_DEF']
+ENTRY_RE = re.compile(r"^\s*-\s+(\S+)\s+(\S+)")
 
+results_dir = os.environ["RESULTS_DIR"]
+gp_out_file = os.environ["INPUT_DEF"]
 name_die_map = {}
-with open(gp_out_file, 'r', encoding='utf-8') as def_file:
-    part = False
-    indicator = False
-    num_bot = 0
-    num_upper = 0
-    pre_line = ''
-    for line in def_file:
-        if 'COMPONENTS' in line:
-            part = True
-        if 'END' in line:
-            part = False
+inside = False
+current = None
 
-        if part:
-            if ('PLACED' in line) or ('FIXED' in line):
-                class_name = pre_line.split()[2]
-                cell_name = pre_line.split()[1]
-                if 'bottom' in class_name:
-                    num_bot += 1
-                    name_die_map[cell_name] = 0
-                elif 'upper' in class_name:
-                    num_upper += 1
-                    name_die_map[cell_name] = 1
-                
-        pre_line = line
+with open(gp_out_file, encoding="utf-8") as def_file:
+    for raw in def_file:
+        line = raw.rstrip("\n")
+        if line.strip().startswith("COMPONENTS"):
+            inside = True
+            continue
+        if inside and line.strip() == "END COMPONENTS":
+            break
+        if not inside:
+            continue
+        match = ENTRY_RE.match(line)
+        if match:
+            current = match.groups()
+            if "PLACED" not in line and "FIXED" not in line:
+                continue
+        if current and ("PLACED" in line or "FIXED" in line):
+            inst, master = current
+            if master.endswith("_bottom") or inst.endswith("_bot"):
+                name_die_map[inst] = 0
+            elif master.endswith("_upper") or inst.endswith("_top"):
+                name_die_map[inst] = 1
+            current = None
 
-with open(f"{results_dir}/name_die_map.pkl", 'wb') as file:
+with open(f"{results_dir}/name_die_map.pkl", "wb") as file:
     pickle.dump(name_die_map, file)

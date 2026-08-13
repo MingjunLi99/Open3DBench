@@ -5,6 +5,7 @@
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 BUILD_DIR="${SCRIPT_DIR}/build_convert_only"
 INSTALL_DIR="${SCRIPT_DIR}/install"
+BUILD_JOBS=${BUILD_JOBS:-4}
 
 usage() {
   echo "Usage: bash convert_output.sh <design|iccad2022_all|iccad2023_all> <method> <variant>"
@@ -30,8 +31,8 @@ fi
 mkdir -p "${BUILD_DIR}"
 cd "${BUILD_DIR}"
 cmake .. -DPLACELOL_CONVERT_ONLY=ON
-make -j
-make -j install
+make -j"${BUILD_JOBS}"
+make -j"${BUILD_JOBS}" install
 cd "${INSTALL_DIR}"
 
 failed_designs=()

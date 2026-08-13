@@ -100,6 +100,19 @@ This directory supports:
 
 Final logs and evaluation artifacts are archived under `OpenROAD-3D/flow/logs/`.
 
+For an air-gapped CentOS 7.9 WSL2 deployment, including offline Docker setup,
+image loading, data installation, and smoke tests, see
+[`deploy/offline/README.zh-CN.md`](./deploy/offline/README.zh-CN.md).
+
+For a company placer that emits separate top/bottom Nangate45 DEFs, use
+`OpenROAD-3D/flow/run_company_3d.sh`. It converts `HBT[n]` DEF pins into the
+platform HBT pseudo-cells, adds `_top`/`_bot` instance and `_upper`/`_bottom`
+master suffixes, and then runs the existing OpenROAD-3D backend evaluation.
+This path does not require Place-LoL benchmarks or placer binaries.
+
+Company deployment changes and compatibility notes are tracked in
+[`COMPANY_DEPLOY_CHANGELOG.md`](./COMPANY_DEPLOY_CHANGELOG.md).
+
 ## MoL Workflow
 
 The typical `MoL` workflow is:

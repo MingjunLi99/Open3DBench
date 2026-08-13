@@ -1,3 +1,11 @@
 Place-MoL/benchmarks/
 Place-LoL/benchmarks/
 OpenROAD-3D/flow/evaluation_pack/
+
+/tmp
+/offline-dist/
+/deploy/offline/artifacts/
+
+# Offline deployment payloads are distributed separately from Git.
+*.docker.tar
+*.docker.tar.gz

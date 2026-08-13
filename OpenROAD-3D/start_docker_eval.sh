@@ -5,15 +5,32 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd)
 OPENROAD_ROOT="${SCRIPT_DIR}"
-PLACE_LOL_ROOT="${REPO_ROOT}/Place-LoL"
+IMAGE=${OPEN3DBENCH_EVAL_IMAGE:-shiyunqi/open3dbench:eval}
+NETWORK=${OPEN3DBENCH_NETWORK:-none}
 
-if [[ ! -d "${PLACE_LOL_ROOT}" ]]; then
-    echo "Place-LoL directory not found at: ${PLACE_LOL_ROOT}" >&2
-    exit 1
+if [[ -n "${DOCKER_CMD:-}" ]]; then
+    read -r -a docker_cmd <<< "${DOCKER_CMD}"
+elif [[ ${EUID} -eq 0 ]]; then
+    docker_cmd=(docker)
+elif command -v sudo >/dev/null 2>&1; then
+    docker_cmd=(sudo docker)
+else
+    docker_cmd=(docker)
 fi
 
-sudo docker run --rm -it \
-    -v "${OPENROAD_ROOT}:/workspace/OpenROAD-3D" \
-    -v "${PLACE_LOL_ROOT}:/workspace/Place-LoL" \
-    shiyunqi/open3dbench:eval \
-    bash -lc "export PLACE_LOL_ROOT=/workspace/Place-LoL && cd /workspace/OpenROAD-3D/flow && exec bash"
+mounts=(-v "${OPENROAD_ROOT}:/workspace/OpenROAD-3D")
+container_env=""
+if [[ -d "${REPO_ROOT}/Place-LoL" ]]; then
+    mounts+=(-v "${REPO_ROOT}/Place-LoL:/workspace/Place-LoL")
+    container_env="export PLACE_LOL_ROOT=/workspace/Place-LoL &&"
+fi
+if [[ -n "${COMPANY_PLACER_OUTPUTS:-}" ]]; then
+    [[ -d "${COMPANY_PLACER_OUTPUTS}" ]] || { echo "COMPANY_PLACER_OUTPUTS is not a directory" >&2; exit 1; }
+    mounts+=(-v "${COMPANY_PLACER_OUTPUTS}:/workspace/company-input:ro")
+fi
+
+exec "${docker_cmd[@]}" run --rm -it \
+    --network "${NETWORK}" \
+    "${mounts[@]}" \
+    "${IMAGE}" \
+    bash -lc "${container_env} cd /workspace/OpenROAD-3D/flow && exec bash"

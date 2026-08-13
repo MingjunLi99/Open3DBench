@@ -1,80 +1,49 @@
 import os
+import re
+
+
+ENTRY_RE = re.compile(r"^\s*-\s+(\S+)")
+PLACED_RE = re.compile(r"(\+\s+(?:PLACED|FIXED)\s+\(\s*)(-?\d+)(\s+)(-?\d+)(.*)")
+
 
 def read_def_and_store_coord(filename, name2coord_map):
-    with open(filename, 'r') as file:
-        lines = file.readlines()
-    
-    inside_components = False
-    modified_lines = []
-    count = 0
-    for line in lines:
-
-        if line.strip().startswith("COMPONENTS"):
-            inside_components = True
-            modified_lines.append(line)
+    current = None
+    for line in open(filename, encoding="utf-8"):
+        match = ENTRY_RE.match(line)
+        if match:
+            current = match.group(1)
             continue
-        elif line.strip() == "END COMPONENTS":
-            inside_components = False
-            modified_lines.append(line)
-            continue
-        
-        if inside_components:
-            parts = line.split()
-            if len(parts) > 2:
-                count += 1
-                coord_x = parts[-5]
-                coord_y = parts[-4]
-                cell_name = parts[1]
-                name2coord_map[cell_name] = (coord_x, coord_y)
+        if current:
+            placed = PLACED_RE.search(line)
+            if placed:
+                name2coord_map[current] = (placed.group(2), placed.group(4))
+                current = None
 
-    print(f"read lines: {count}")
 
 def modify_def(filename, name2coord_map):
-    with open(filename, 'r') as file:
-        lines = file.readlines()
-    
-    inside_components = False
+    lines = open(filename, encoding="utf-8").readlines()
+    current = None
     modified_lines = []
-    count = 0
     for line in lines:
-
-        if line.strip().startswith("COMPONENTS"):
-            inside_components = True
+        match = ENTRY_RE.match(line)
+        if match:
+            current = match.group(1)
             modified_lines.append(line)
             continue
-        elif line.strip() == "END COMPONENTS":
-            inside_components = False
-            modified_lines.append(line)
-            continue
-        
-        if inside_components:
-            parts = line.split()
-            if len(parts) > 2:
-                cell_name = parts[1]
-                if cell_name in name2coord_map:
-                    count += 1
-                    parts[-5] = name2coord_map[cell_name][0]
-                    parts[-4] = name2coord_map[cell_name][1]
-                    modified_line = " ".join(parts) + "\n"
-                    modified_lines.append(modified_line)
-                    continue
+        if current and current in name2coord_map:
+            placed = PLACED_RE.search(line)
+            if placed:
+                x, y = name2coord_map[current]
+                line = line[: placed.start(2)] + x + line[placed.end(2) : placed.start(4)] + y + line[placed.end(4) :]
+                current = None
         modified_lines.append(line)
-    print(f"modified lines: {count}")
-    with open(filename, 'w') as file:
+    with open(filename, "w", encoding="utf-8") as file:
         file.writelines(modified_lines)
 
+
 if __name__ == "__main__":
+    results_dir = os.environ["RESULTS_DIR"]
     name2coord_map = {}
-    try:
-        results_dir = os.environ['RESULTS_DIR']
-        print(f"Results directory is located at: {results_dir}")
-    except KeyError:
-        print("ERROR: RESULTS_DIR environment variable is not set.")
-
-    file_name_1 = f"{results_dir}/upper_legalized.def"
-    file_name_2 = f"{results_dir}/bottom_legalized.def"
-    read_def_and_store_coord(file_name_1, name2coord_map)
-    read_def_and_store_coord(file_name_2, name2coord_map)
-
-    target_def = f"{results_dir}/4_1_cts.def"
-    modify_def(target_def, name2coord_map)
+    read_def_and_store_coord(f"{results_dir}/upper_legalized.def", name2coord_map)
+    read_def_and_store_coord(f"{results_dir}/bottom_legalized.def", name2coord_map)
+    modify_def(f"{results_dir}/4_1_cts.def", name2coord_map)
