@@ -12,8 +12,7 @@ Open3DBench/
 │   ├── start_docker_wsl.sh
 │   └── load_images.sh
 ├── doc/
-│   ├── README.zh-CN.md
-│   ├── COMPANY_DEF_AGENT_PROMPT.zh-CN.md
+│   ├── DEPLOY_README.zh-CN.md
 │   └── COMPANY_DEPLOY_CHANGELOG.md
 ├── docker/
 │   ├── docker-26.1.4.tgz
@@ -177,7 +176,7 @@ OpenROAD-3D/flow/logs/nangate45_3D/<design>/company/
 OpenROAD-3D/flow/reports/nangate45_3D/<design>/company/
 ```
 
-公司 Windows agent 修改转换器时，使用 `doc/COMPANY_DEF_AGENT_PROMPT.zh-CN.md`。修改后的文件必须回到 CentOS WSL 完成实际 DEF 和 backend 测试。
+公司 Windows agent 修改转换器时，可使用制备机本地的 `tmp/COMPANY_DEF_AGENT_PROMPT.zh-CN.md`。`tmp/` 不进入 Git，也被第 1.2 节的离线压缩命令排除，因此如需使用该提示词，必须手工单独复制到公司电脑。修改后的转换器必须回到 CentOS WSL 完成实际 DEF 和 backend 测试。
 
 ## 第三部分：Win11 创建单一 CodeHub repo
 

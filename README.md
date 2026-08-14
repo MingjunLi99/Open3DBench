@@ -6,7 +6,7 @@ This branch contains the OpenROAD-3D backend flow used to evaluate placement res
 Open3DBench/
 ├── OpenROAD-3D/       # DEF conversion and OpenROAD backend evaluation
 ├── script/            # CentOS WSL Docker deployment scripts
-├── doc/               # Chinese deployment guide, agent prompt and changelog
+├── doc/               # Chinese deployment guide and changelog
 └── docker/            # Local Docker 26 archive and eval image
 ```
 
@@ -20,4 +20,4 @@ The company placer supplies separate `<design>_top.def` and `<design>_bot.def` f
 
 The two large files under `docker/` are kept out of the public GitHub fork. They are included in the offline transfer archive and added through Git LFS only when the company CodeHub repository is initialized.
 
-For the complete offline deployment, evaluation and CodeHub workflow, see [doc/README.zh-CN.md](doc/README.zh-CN.md).
+For the complete offline deployment, evaluation and CodeHub workflow, see [doc/DEPLOY_README.zh-CN.md](doc/DEPLOY_README.zh-CN.md).

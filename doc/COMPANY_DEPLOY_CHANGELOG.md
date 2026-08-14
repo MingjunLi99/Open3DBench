@@ -7,8 +7,10 @@
 ### 目录规范化
 
 - 新建根目录 `script/`，集中存放 Docker 静态安装、WSL daemon 启动和 eval image 加载脚本。
-- 新建根目录 `doc/`，集中存放中文部署指南、公司 DEF agent prompt 和本修改日志；仓库根目录只保留 `README.md`。
+- 新建根目录 `doc/`，集中存放中文部署指南和本修改日志；仓库根目录只保留 `README.md`。
 - 删除原 `deploy/offline/` 空目录，并同步更新 README、脚本提示和部署命令中的有效路径。
+- 中文部署指南进一步重命名为 `doc/DEPLOY_README.zh-CN.md`，并同步修正根 README 和 OpenROAD-3D README 的导航链接。
+- 公司 DEF debug prompt 移至本地 `tmp/`，不再通过 Git 或离线工程压缩包同步；需要时由使用者单独手工复制。
 
 ### 仓库范围
 
