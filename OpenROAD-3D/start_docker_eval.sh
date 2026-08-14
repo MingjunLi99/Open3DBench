@@ -3,7 +3,6 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-REPO_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd)
 OPENROAD_ROOT="${SCRIPT_DIR}"
 IMAGE=${OPEN3DBENCH_EVAL_IMAGE:-shiyunqi/open3dbench:eval}
 NETWORK=${OPEN3DBENCH_NETWORK:-none}
@@ -19,11 +18,6 @@ else
 fi
 
 mounts=(-v "${OPENROAD_ROOT}:/workspace/OpenROAD-3D")
-container_env=""
-if [[ -d "${REPO_ROOT}/Place-LoL" ]]; then
-    mounts+=(-v "${REPO_ROOT}/Place-LoL:/workspace/Place-LoL")
-    container_env="export PLACE_LOL_ROOT=/workspace/Place-LoL &&"
-fi
 if [[ -n "${COMPANY_PLACER_OUTPUTS:-}" ]]; then
     [[ -d "${COMPANY_PLACER_OUTPUTS}" ]] || { echo "COMPANY_PLACER_OUTPUTS is not a directory" >&2; exit 1; }
     mounts+=(-v "${COMPANY_PLACER_OUTPUTS}:/workspace/company-input:ro")
@@ -33,4 +27,4 @@ exec "${docker_cmd[@]}" run --rm -it \
     --network "${NETWORK}" \
     "${mounts[@]}" \
     "${IMAGE}" \
-    bash -lc "${container_env} cd /workspace/OpenROAD-3D/flow && exec bash"
+    bash -lc "cd /workspace/OpenROAD-3D/flow && exec bash"

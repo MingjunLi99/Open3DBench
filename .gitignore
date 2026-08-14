@@ -1,11 +1,8 @@
-Place-MoL/benchmarks/
-Place-LoL/benchmarks/
 OpenROAD-3D/flow/evaluation_pack/
 
-/tmp
-/offline-dist/
-/deploy/offline/artifacts/
+# Local offline artifacts: excluded from the GitHub fork. Add them with
+# Git LFS and `git add -f` when initializing the company CodeHub repository.
+/docker/docker-26.1.4.tgz
+/docker/open3dbench-eval.docker.tar
 
-# Offline deployment payloads are distributed separately from Git.
-*.docker.tar
-*.docker.tar.gz
+/tmp/
