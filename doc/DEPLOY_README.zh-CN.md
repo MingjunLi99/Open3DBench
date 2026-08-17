@@ -192,7 +192,7 @@ D:\Workspace\Open3DBench
 Set-Location D:\Workspace\Open3DBench
 
 git init
-git checkout -b huawei-partition
+git checkout -b main
 git lfs install
 git lfs track "docker/docker-26.1.4.tgz"
 git lfs track "docker/open3dbench-eval.docker.tar"
@@ -203,7 +203,7 @@ git add -f `
   docker/open3dbench-eval.docker.tar
 git commit -m "Initial Open3DBench company backend"
 git remote add origin <CODEHUB_REPO_URL>
-git push -u origin huawei-partition
+git push -u origin main
 ```
 
 提交前确认大文件由 LFS 管理：
@@ -213,6 +213,11 @@ git lfs ls-files
 git status
 ```
 
+`OpenROAD-3D/.gitignore` 会自动排除 backend evaluation 的可再生产物：
+`flow/logs/`、`flow/objects/`、`flow/reports/` 和 `flow/results/`。因此不要使用
+`git add -f` 强制加入这些目录，也不要将公司输入 DEF、ODB、日志或报告上传到
+CodeHub；需要归档某次评估结果时，应按公司数据管理要求在仓库外单独保存。
+
 这里必须使用 `git add -f`，因为这两个本地离线文件在从 GitHub 传来的 `.gitignore` 中被精确排除；`.gitattributes` 已保证强制加入时写入 Git 索引的是 LFS pointer，而不是原始大文件。
 
 后续同事只使用这一个 repo：
@@ -220,7 +225,7 @@ git status
 ```powershell
 git lfs install
 git clone <CODEHUB_REPO_URL>
-git checkout huawei-partition
+git checkout main
 git lfs pull
 ```
 

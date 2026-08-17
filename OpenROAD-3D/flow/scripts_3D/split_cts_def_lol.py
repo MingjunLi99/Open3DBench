@@ -8,6 +8,7 @@ from pathlib import Path
 SECTION_RE = re.compile(r"^(\s*)(COMPONENTS|PINS|NETS)\s+(\d+)")
 END_RE = re.compile(r"^\s*END\s+(COMPONENTS|PINS|NETS)")
 ENTRY_RE = re.compile(r"^\s*-\s+(\S+)")
+HBT_MASTERS = {"HBT_TOPIN", "HBT_BOTIN"}
 
 
 def section_entries(lines, name):
@@ -40,6 +41,13 @@ def entry_name(entry):
     return ENTRY_RE.match(entry[0]).group(1)
 
 
+def component_master(entry):
+    fields = entry[0].split()
+    if len(fields) < 3:
+        raise RuntimeError(f"malformed COMPONENT entry: {entry[0]}")
+    return fields[2]
+
+
 def render(name, entries):
     out = [f"{name} {len(entries)} ;"]
     for entry in entries:
@@ -56,7 +64,15 @@ def write_side(lines, side, output: Path):
         raise RuntimeError("4_1_cts.def must contain COMPONENTS and NETS")
     marker = "_upper" if side == "upper" else "_bottom"
     net_marker = "_TOP" if side == "upper" else "_BOT"
-    side_components = [e for e in components if len(e[0].split()) > 2 and marker in e[0].split()[2]]
+    # HBT pseudo-cells bridge a _TOP net and a _BOT net.  Their masters do not
+    # carry a die suffix, so each standalone legalization DEF must contain the
+    # same HBT component in addition to its die-local standard cells/macros.
+    side_components = [
+        entry
+        for entry in components
+        if marker in component_master(entry)
+        or component_master(entry) in HBT_MASTERS
+    ]
     side_nets = [e for e in nets if entry_name(e).endswith(net_marker)]
     side_pins = [e for e in pins if any(net_marker in line for line in e)]
 

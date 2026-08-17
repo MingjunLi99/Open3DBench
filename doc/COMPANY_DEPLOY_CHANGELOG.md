@@ -2,6 +2,13 @@
 
 本文件记录 `huawei-partition` 分支针对公司离线环境和公司 3D placer 的适配。后续提交按时间倒序追加，记录行为变化、兼容性影响、验证结果和遗留事项；不要在此写入公司 URL、账号、token、license server、内部 PDK 路径或专有 DEF 内容。
 
+## 2026-08-17：忽略 backend evaluation 运行产物
+
+- `OpenROAD-3D/.gitignore` 新增 `flow/logs/`、`flow/reports/` 和 `flow/results/`，并将已有 `flow/objects` 规范为目录规则。
+- 因此 OpenROAD backend flow 生成的日志、JSON metrics、ODB、DEF、SPEF、DRC 报告、布局图片和 HotSpot 输出不会进入 CodeHub 提交；源码、设计配置、脚本和文档仍正常跟踪。
+- 部署指南的 CodeHub 初始化段明确：不得用 `git add -f` 加入这些运行产物或公司输入 DEF，评估归档须在仓库外按公司规定保存。
+- 公司 CodeHub 首次初始化和后续默认开发分支改为 `main`；制备机上的 GitHub 适配分支仍可保留原名 `huawei-partition`，两者不要求同名或共享历史。
+
 ## 2026-08-14：收敛为单仓库 OpenROAD-3D eval 流程
 
 ### 目录规范化

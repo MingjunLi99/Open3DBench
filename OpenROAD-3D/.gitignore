@@ -7,9 +7,12 @@ tools/install
 build_openroad.log
 etc/InstallerOpenROAD.sh
 
-# Test working directories
-
-flow/objects
+# Generated OpenROAD backend-flow artifacts.  These are reproducible from
+# the source/configuration and can contain company placement results.
+flow/logs/
+flow/objects/
+flow/reports/
+flow/results/
 flow/tech
 
 # Tar archives
