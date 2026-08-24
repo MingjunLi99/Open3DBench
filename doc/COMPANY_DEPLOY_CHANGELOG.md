@@ -2,6 +2,13 @@
 
 本文件记录 `huawei-partition` 分支针对公司离线环境和公司 3D placer 的适配。后续提交按时间倒序追加，记录行为变化、兼容性影响、验证结果和遗留事项；不要在此写入公司 URL、账号、token、license server、内部 PDK 路径或专有 DEF 内容。
 
+## 2026-08-24：修复 company flow 的 STA 报告兼容性
+
+- 修复 eval image 中 OpenSTA 2.6.0 不支持 `report_wns/report_tns -max/-min` 而导致 `global_route.tcl` 报 `STA-0562` 的问题；setup/hold WNS、TNS 现分别通过 OpenSTA min/max API 生成。
+- setup/hold 路径报告改用该版本明确支持的 field 名称，继续默认各输出 100 条路径。
+- ideal-clock reset false path 只施加到当前设计实际存在的 port，并补充 Swerv 的 `rst_l` 和 TinyRocket 的 `reset`，不再因其他 case 的 reset 名称不存在而产生 `STA-0101/STA-0472`。
+- 新增脚本兼容性和 Tcl mock 回归测试，覆盖 Ariane、BP、Swerv、TinyRocket 使用的 reset 名称，以及 setup/hold summary/path 报告生成。
+
 ## 2026-08-24：三种 company 实验模式和阶段化 timing 报告
 
 ### Route mode

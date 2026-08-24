@@ -33,11 +33,8 @@ if {[expr [llength [info procs save_image]] > 0]} {
 }
 
 if {[info exist env(IDEAL_CLOCK)]} {
-  set_ideal_network [all_clocks]
-  set_false_path -through rst_ni
-  set_false_path -through reset_i
-  set_false_path -through reset_l
-  set_false_path -through p_clk_async_reset_i
+  source $::env(SCRIPTS_DIR)/ideal_clock_constraints.tcl
+  set_ideal_clock_constraints
 } else {
   set_propagated_clock [all_clocks]
 }
