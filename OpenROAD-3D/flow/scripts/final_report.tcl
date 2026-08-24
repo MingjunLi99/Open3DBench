@@ -19,6 +19,10 @@ global_connect
 source $::env(SCRIPTS_DIR)/deleteRoutingObstructions.tcl
 deleteRoutingObstructions
 
+file copy -force \
+  $::env(REPORTS_DIR)/5_route_drc.rpt \
+  $::env(REPORTS_DIR)/final_detailed_route_drc.rpt
+
 write_db $::env(RESULTS_DIR)/6_final.odb
 write_def $::env(RESULTS_DIR)/6_final.def
 write_verilog $::env(RESULTS_DIR)/6_final.v
@@ -66,6 +70,9 @@ if {[info exist ::env(RCX_RULES)]} {
 } else {
   puts "OpenRCX is not enabled for this platform."
 }
+
+source $::env(SCRIPTS_DIR)/write_timing_report.tcl
+write_timing_report final $::env(REPORTS_DIR)/final_timing.rpt
 
 source $::env(SCRIPTS_DIR)/report_metrics.tcl
 report_metrics "finish"

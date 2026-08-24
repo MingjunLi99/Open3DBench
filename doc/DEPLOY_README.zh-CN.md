@@ -1,232 +1,163 @@
-# Open3DBench 公司环境简化部署
+# Open3DBench 公司环境部署与使用指南
 
-本文只支持一种流程：公司 placer 生成 top/bottom DEF，OpenROAD-3D 负责转换和 backend evaluation。不包含或运行 Place-LoL、Place-MoL。
+本指南面向公司同事：从 CodeHub 获取工程，部署到离线 CentOS WSL，并运行公司 3D placer 的 top/bottom DEF backend evaluation。支持 `ariane`、`bp`、`swerv_wrapper`、`tinyRocket`，不运行 Place-LoL/Place-MoL。
 
-代码和离线大文件最终保存在同一个 CodeHub repo：
+## 1. CodeHub 到 CentOS（首次部署）
 
-```text
-Open3DBench/
-├── OpenROAD-3D/
-├── script/
-│   ├── install_docker_static.sh
-│   ├── start_docker_wsl.sh
-│   └── load_images.sh
-├── doc/
-│   ├── DEPLOY_README.zh-CN.md
-│   └── COMPANY_DEPLOY_CHANGELOG.md
-├── docker/
-│   ├── docker-26.1.4.tgz
-│   └── open3dbench-eval.docker.tar
-├── .gitattributes
-└── .gitignore
-```
+Win11 用于 CodeHub，CentOS WSL 用于 Docker/OpenROAD。工程应放在 WSL ext4（如 `/root/Workspace/Open3DBench`），不要直接在 `/mnt/c`、`/mnt/d` 运行。
 
-`docker/` 中两个大文件在当前 GitHub fork 中由 `.gitignore` 排除，但仍会进入 Ubuntu 制作的离线传输压缩包；测试通过后，在公司 Win11 初始化 CodeHub repo 时再通过 Git LFS 强制加入。公司 DEF、运行日志、ODB、route 结果和报告不得提交。
+首次在 Win11 clone：`git lfs install`（当前用户只需一次），然后 `git clone <CODEHUB_REPO_URL> Open3DBench`、进入目录并执行 `git lfs pull`。确认 `docker/docker-26.1.4.tgz` 和 `docker/open3dbench-eval.docker.tar` 是实际大文件而不是 LFS pointer。
 
-## 第一部分：Ubuntu 制备并传入公司 CentOS
-
-### 1.1 确认文件
-
-在 Open3DBench 根目录执行：
-
-```bash
-test -s docker/docker-26.1.4.tgz
-test -s docker/open3dbench-eval.docker.tar
-test -f OpenROAD-3D/flow/util/convert_company_3d_def.py
-```
-
-当前 Ubuntu 不需要安装 Docker；两个 Docker 文件已经准备好。
-
-### 1.2 打包工作树
-
-在 Open3DBench 的上一级目录执行。压缩包不包含当前 Git 历史、旧 `offline-dist`、临时文件和 OpenROAD 运行结果：
-
-```bash
-cd /home/mjli/Workspace/3DIC/flow
-
-tar -czf Open3DBench-company.tar.gz \
-  --exclude='Open3DBench/.git' \
-  --exclude='Open3DBench/.agents' \
-  --exclude='Open3DBench/.codex' \
-  --exclude='Open3DBench/.vscode' \
-  --exclude='Open3DBench/offline-dist' \
-  --exclude='Open3DBench/tmp' \
-  --exclude='Open3DBench/OpenROAD-3D/flow/logs' \
-  --exclude='Open3DBench/OpenROAD-3D/flow/reports' \
-  --exclude='Open3DBench/OpenROAD-3D/flow/results' \
-  Open3DBench
-```
-
-将 `Open3DBench-company.tar.gz` 通过 scp 或 U 盘复制到公司电脑，再放到公司 WSL 可访问的位置，例如：
-
-```text
-/mnt/d/Workspace/Open3DBench-company.tar.gz
-```
-
-## 第二部分：公司 CentOS WSL 部署和测试
-
-### 2.1 解压
+在 CentOS WSL 复制（不会产生第二层 `Open3DBench/Open3DBench`）：
 
 ```bash
 mkdir -p /root/Workspace
-tar -xzf /mnt/d/Workspace/Open3DBench-company.tar.gz \
-  -C /root/Workspace
+tar -C /mnt/d/Workspace -cf - Open3DBench | tar -C /root/Workspace -xf -
 cd /root/Workspace/Open3DBench
 ```
 
-源码和运行目录位于 WSL ext4；不要直接在 `/mnt/d` 上运行 OpenROAD。
-
-### 2.2 安装并启动 Docker
-
-不要使用公司 yum 源中的 Docker 1.13.1。安装随仓库提供的 Docker 26：
+首次安装 Docker 26（root；不要使用 yum 的 Docker 1.13.1）：
 
 ```bash
-bash script/install_docker_static.sh \
-  docker/docker-26.1.4.tgz
-bash script/start_docker_wsl.sh
-docker version
+bash script/install_docker_static.sh docker/docker-26.1.4.tgz
 ```
 
-WSL 完全退出后 dockerd 会停止。重新进入 WSL 后执行：
+首次部署、或每次 WSL 完全退出后启动 daemon：`bash script/start_docker_wsl.sh`。首次部署或镜像更新后加载 eval image：`bash script/load_images.sh docker/open3dbench-eval.docker.tar`。
 
-```bash
-cd /root/Workspace/Open3DBench
-bash script/start_docker_wsl.sh
-```
+## 2. 启动容器和运行实验
 
-### 2.3 加载 eval 镜像
-
-```bash
-bash script/load_images.sh \
-  docker/open3dbench-eval.docker.tar
-```
-
-运行容器：
+将公司 DEF 放在仓库外，例如 `/root/Workspace/freePartitioner/output_openroad/`，在 host 执行：
 
 ```bash
 cd /root/Workspace/Open3DBench/OpenROAD-3D
-COMPANY_PLACER_OUTPUTS=/root/Workspace/freePartitioner/output_openroad \
-  ./start_docker_eval.sh
+COMPANY_PLACER_OUTPUTS=/root/Workspace/freePartitioner/output_openroad ./start_docker_eval.sh
 ```
 
-### 2.4 公司 DEF 目录
-
-```text
-/root/Workspace/freePartitioner/output_openroad/
-├── swerv_wrapper_top.def
-└── swerv_wrapper_bot.def
-```
-
-其他设计使用相同命名方式：
-
-```text
-ariane_top.def / ariane_bot.def
-bp_top.def / bp_bot.def
-tinyRocket_top.def / tinyRocket_bot.def
-```
-
-转换约定：
-
-- top/bottom instance 分别增加 `_top`、`_bot`；
-- cell/fakeram master 分别增加 `_upper`、`_bottom`；
-- 成对的 `HBT[n]` DEF PIN 转换为 `HBT_n` pseudo-cell；
-- top/bottom local net 分别增加 `_TOP`、`_BOT`；
-- HBT 的两侧坐标、方向、net 引用必须符合实际 DEF 和 OpenROAD-3D 输入要求。
-
-### 2.5 转换和评估
-
-在 eval 容器中先单独运行转换：
+容器内工程为 `/workspace/OpenROAD-3D`，输入为只读的 `/workspace/company-input`，默认进入 `/workspace/OpenROAD-3D/flow`，网络为 `none`。
 
 ```bash
-cd /workspace/OpenROAD-3D/flow
-python3 util/convert_company_3d_def.py \
-  --top /workspace/company-input/swerv_wrapper_top.def \
-  --bottom /workspace/company-input/swerv_wrapper_bot.def \
-  --output /tmp/swerv_wrapper.merged.def
-```
-
-完整 backend evaluation：
-
-```bash
+# 默认 quick：global routing (GR) 5 轮、detail routing (DR) 5 轮、Finish
 ./run_company_3d.sh swerv_wrapper \
   /workspace/company-input/swerv_wrapper_top.def \
   /workspace/company-input/swerv_wrapper_bot.def
-```
 
-支持：
-
-```text
-ariane  bp  swerv_wrapper  tinyRocket
-```
-
-添加 HotSpot：
-
-```bash
+# postplace：GR 5 轮后输出报告并停止，不运行 DR/Finish
 ./run_company_3d.sh swerv_wrapper \
   /workspace/company-input/swerv_wrapper_top.def \
   /workspace/company-input/swerv_wrapper_bot.def \
-  --hotspot
+  --route-mode postplace
+
+# quality：GR 50 轮、DR 默认停止条件、Finish
+./run_company_3d.sh swerv_wrapper \
+  /workspace/company-input/swerv_wrapper_top.def \
+  /workspace/company-input/swerv_wrapper_bot.def \
+  --route-mode quality
 ```
 
-主要结果位于：
+这里必须使用容器内的完整 DEF 路径。`start_docker_eval.sh` 把 host 的 placer 输出目录只读挂载为 `/workspace/company-input`，而脚本当前工作目录是 `/workspace/OpenROAD-3D/flow`；因此 `top.def bot.def` 只有在这两个文件确实位于当前 flow 目录时才成立。
+
+完整语法：`run_company_3d.sh <ariane|bp|swerv_wrapper|tinyRocket> <top.def> <bot.def> [--route-mode postplace|quick|quality] [--output DIR] [--hotspot]`。`--hotspot` 只能用于 quick/quality。
+
+三种模式共用 `flow/designs/nangate45_3D/config_company_route_modes.mk`；timing 路径默认各 100 条，可用 `TIMING_REPORT_PATH_COUNT=300` 临时调整。
+
+### 2.1 当前整体 flow
+
+company 入口先把两个 die DEF 合并并转换，再完成上下 die 的独立 legalization 和坐标重组，生成可供 OpenROAD-3D routing 使用的 `4_cts.odb`。之后的标准 routing/finish 链如下：
 
 ```text
-OpenROAD-3D/flow/results/nangate45_3D/<design>/company/
-OpenROAD-3D/flow/logs/nangate45_3D/<design>/company/
-OpenROAD-3D/flow/reports/nangate45_3D/<design>/company/
+company top.def + bottom.def
+          │
+          ▼
+merged double-metal-stacking DEF
+          │  read_def / split upper-bottom / legalization / reintegration
+          ▼
+4_cts.odb                 CTS/placement 后的 3D 数据库
+          │
+          │ do-route
+          ▼
+5_1_grt.odb               Global Routing（生成 route.guide）
+          │
+          ▼
+5_2_route.odb             Detailed Routing
+          │
+          ▼
+5_route.odb               routing 阶段标准输出
+          │
+          │ do-finish
+          ▼
+6_1_fill.odb               可选 density fill；当前通常是复制 5_route.odb
+          │
+          ▼
+6_final.odb
+6_final.def
+6_final.v
+6_final.sdc
+6_final.spef                 OpenRCX 提取后的寄生参数
+          │
+          ▼
+final metrics / timing / DRC / congestion reports
 ```
 
-公司 Windows agent 修改转换器时，可使用制备机本地的 `tmp/COMPANY_DEF_AGENT_PROMPT.zh-CN.md`。`tmp/` 不进入 Git，也被第 1.2 节的离线压缩命令排除，因此如需使用该提示词，必须手工单独复制到公司电脑。修改后的转换器必须回到 CentOS WSL 完成实际 DEF 和 backend 测试。
+`postplace` 模式执行到 `5_1_grt.odb` 后停止，不执行后续的 Detailed Routing 和 Finish；因此它只产生 postplace 报告，不会产生 `5_route_drc.rpt`、`final_timing.rpt` 或 `6_final.*`。
 
-## 第三部分：Win11 创建单一 CodeHub repo
-
-测试通过后，将 `/root/Workspace/Open3DBench` 复制到 Win11，例如：
+## 3. 输出目录和报告
 
 ```text
-D:\Workspace\Open3DBench
+flow/reports/nangate45_3D/<内部设计名>/company_<mode>/
+flow/results/nangate45_3D/<内部设计名>/company_<mode>/
+flow/logs/nangate45_3D/<内部设计名>/company_<mode>/
 ```
 
-在 PowerShell 中执行：
+所有模式：`postplace_global_congestion.rpt`、`postplace_congestion.webp`（部分构建为 `.webp.png`）、`postplace_timing.rpt`。无 Global Routing overflow 时，部分 OpenROAD 版本不会创建空 congestion `.rpt`，应结合 `5_1_grt.log` 判断。
 
-```powershell
-Set-Location D:\Workspace\Open3DBench
+quick/quality 另有：`5_route_drc.rpt`、`final_detailed_route_drc.rpt`、`final_timing.rpt`、`final_congestion.webp` 及 final routing/placement/clocks/resizer 图片。Timing report 包含 setup/max、hold/min 的 WNS、TNS 和最差路径；`IDEAL_CLOCK=1`，不等同 signoff OCV/MMMC STA。
 
-git init
-git checkout -b main
-git lfs install
-git lfs track "docker/docker-26.1.4.tgz"
-git lfs track "docker/open3dbench-eval.docker.tar"
+postplace results 主要为 `4_cts.odb`、`4_cts.sdc`、`5_1_grt.odb`、`route.guide`；完整模式还生成 `5_2_route.odb`、`5_route.odb`、`6_final.odb/def/v/sdc/spef`。看到 DRT `running iteration N` 表示 GR 已结束、正在 DR。
 
-git add .
-git add -f `
-  docker/docker-26.1.4.tgz `
-  docker/open3dbench-eval.docker.tar
-git commit -m "Initial Open3DBench company backend"
-git remote add origin <CODEHUB_REPO_URL>
-git push -u origin main
+### 3.1 results 目录示例
+
+以 `swerv_wrapper` 的 `quick` 完整实验为例：
+
+```text
+flow/results/nangate45_3D/swerv_wrapper/company_quick/
+├── 1_synth.sdc
+├── 4_cts.odb
+├── 4_cts.sdc
+├── 5_1_grt.odb
+├── route.guide
+├── 5_2_route.odb
+├── 5_route.odb
+├── 5_route.sdc
+├── 6_1_fill.odb
+├── 6_1_fill.sdc
+├── 6_final.odb
+├── 6_final.def
+├── 6_final.v
+├── 6_final.sdc
+└── 6_final.spef
 ```
 
-提交前确认大文件由 LFS 管理：
+`postplace` 目录通常在 `5_1_grt.odb` 和 `route.guide` 后结束；`quality` 的文件名相同，只是目录名为 `company_quality`。合并输入 DEF 另存于 `flow/results/company/<design>/<design>.merged.def`。
 
-```powershell
-git lfs ls-files
-git status
+### 3.2 reports 目录示例
+
+```text
+flow/reports/nangate45_3D/swerv_wrapper/company_quick/
+├── postplace_global_congestion.rpt
+├── postplace_congestion.webp       # 有的构建为 .webp.png
+├── postplace_timing.rpt
+├── 5_route_drc.rpt
+├── final_detailed_route_drc.rpt
+├── final_timing.rpt
+├── final_congestion.webp
+├── final_routing.webp
+├── final_placement.webp
+├── final_clocks.webp
+└── final_resizer.webp
 ```
 
-`OpenROAD-3D/.gitignore` 会自动排除 backend evaluation 的可再生产物：
-`flow/logs/`、`flow/objects/`、`flow/reports/` 和 `flow/results/`。因此不要使用
-`git add -f` 强制加入这些目录，也不要将公司输入 DEF、ODB、日志或报告上传到
-CodeHub；需要归档某次评估结果时，应按公司数据管理要求在仓库外单独保存。
+postplace 实验只应查看前三项；DRC/final 项不存在是因为流程有意提前停止，而不是运行失败。
 
-这里必须使用 `git add -f`，因为这两个本地离线文件在从 GitHub 传来的 `.gitignore` 中被精确排除；`.gitattributes` 已保证强制加入时写入 Git 索引的是 LFS pointer，而不是原始大文件。
+## 4. 更新与数据管理
 
-后续同事只使用这一个 repo：
-
-```powershell
-git lfs install
-git clone <CODEHUB_REPO_URL>
-git checkout main
-git lfs pull
-```
-
-CodeHub 中不需要第二个 artifacts repo，也不需要 release bundle、checksum、source tar 或单独的 Docker 制品仓库。
+CentOS 无网时先在 Win11 执行 `git pull --ff-only`、`git lfs pull`，再复制到 WSL；不要在 OpenROAD 运行期间覆盖脚本。普通使用者只需 `git lfs install`/`git lfs pull`；维护者首次建立 CodeHub 或更新 Docker 制品时才需 `git lfs track`。禁止提交公司 DEF、运行目录、ODB、SPEF、报告和图片，实验归档放在仓库外。

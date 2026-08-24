@@ -5,21 +5,33 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 usage() {
-    echo "Usage: $0 <design> <design_top.def> <design_bot.def> [--output DIR] [--hotspot]"
+    echo "Usage: $0 <design> <design_top.def> <design_bot.def> [--route-mode quick|quality|postplace] [--output DIR] [--hotspot]"
     echo "Designs: ariane bp swerv_wrapper tinyRocket"
+    echo "Default route mode: quick"
 }
 
 if [[ $# -lt 3 ]]; then usage >&2; exit 2; fi
 design=$1; top_def=$2; bottom_def=$3; shift 3
 output_dir=${COMPANY_3D_OUTPUT_DIR:-${SCRIPT_DIR}/results/company/${design}}
+route_mode=${COMPANY_ROUTE_MODE:-quick}
 hotspot=
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --route-mode) [[ $# -ge 2 ]] || { usage >&2; exit 2; }; route_mode=$2; shift 2 ;;
         --output) [[ $# -ge 2 ]] || { usage >&2; exit 2; }; output_dir=$2; shift 2 ;;
         --hotspot) hotspot=1; shift ;;
         *) usage >&2; exit 2 ;;
     esac
 done
+
+case "$route_mode" in
+    quick|quality|postplace) ;;
+    *) echo "Unsupported route mode: $route_mode" >&2; usage >&2; exit 2 ;;
+esac
+if [[ "$route_mode" == postplace && -n "$hotspot" ]]; then
+    echo "--hotspot requires quick or quality mode" >&2
+    exit 2
+fi
 
 top_def=$(readlink -f "$top_def")
 bottom_def=$(readlink -f "$bottom_def")
@@ -47,9 +59,10 @@ export COMPANY_3D_DEF="$merged_def"
 export INPUT_DEF="$merged_def"
 export METHOD=company
 export COMPANY_3D_ROOT="$output_dir"
+export COMPANY_ROUTE_MODE="$route_mode"
 
 config="designs/nangate45_3D/${design_fullname}/config_company.mk"
 [[ -f "$config" ]] || { echo "Design config not found: $config" >&2; exit 1; }
-make DESIGN_CONFIG="$config" do-lolflow
-if [[ -n "$hotspot" ]]; then make DESIGN_CONFIG="$config" do-hotspot; fi
-echo "Company 3D evaluation completed: $design"
+make DESIGN_CONFIG="$config" COMPANY_ROUTE_MODE="$route_mode" do-company-flow
+if [[ -n "$hotspot" ]]; then make DESIGN_CONFIG="$config" COMPANY_ROUTE_MODE="$route_mode" do-hotspot; fi
+echo "Company 3D evaluation completed: $design ($route_mode)"

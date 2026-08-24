@@ -22,9 +22,15 @@ if {[info exist env(FASTROUTE_TCL)]} {
 # If GLOBAL_ROUTE_ARGS is specified, then we do only what the
 # GLOBAL_ROUTE_ARGS specifies.
 global_route -guide_file $env(RESULTS_DIR)/route.guide \
-               -congestion_report_file $env(REPORTS_DIR)/congestion.rpt \
+               -congestion_report_file $env(REPORTS_DIR)/postplace_global_congestion.rpt \
                {*}[expr {[info exists ::env(GLOBAL_ROUTE_ARGS)] ? $::env(GLOBAL_ROUTE_ARGS) : \
                {-congestion_iterations 2 -congestion_report_iter_step 5 -verbose}}]
+
+if {[expr [llength [info procs save_image]] > 0]} {
+  set ::env(CONGESTION_IMAGE_FILE) $::env(REPORTS_DIR)/postplace_congestion.webp
+  gui::show "source $::env(SCRIPTS_DIR)/save_congestion_image.tcl" false
+  unset ::env(CONGESTION_IMAGE_FILE)
+}
 
 if {[info exist env(IDEAL_CLOCK)]} {
   set_ideal_network [all_clocks]
@@ -37,6 +43,9 @@ if {[info exist env(IDEAL_CLOCK)]} {
 }
 
 estimate_parasitics -global_routing
+
+source $::env(SCRIPTS_DIR)/write_timing_report.tcl
+write_timing_report postplace $::env(REPORTS_DIR)/postplace_timing.rpt
 
 # if { [info exists ::env(RECOVER_POWER)] } {
 #   puts "Downsizing/switching to higher Vt  for non critical gates for power recovery"

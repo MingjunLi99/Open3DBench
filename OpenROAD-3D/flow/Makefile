@@ -732,6 +732,28 @@ do-lolflow:
 	cp $(RESULTS_DIR)/1_synth.sdc $(RESULTS_DIR)/4_cts.sdc
 	$(UNSET_AND_MAKE) do-route do-finish
 
+.PHONY: do-company-postplace
+do-company-postplace:
+	mkdir -p $(RESULTS_DIR) $(LOG_DIR) $(REPORTS_DIR)
+	cp $(SDC_FILE) $(RESULTS_DIR)/1_synth.sdc
+	$(OPENROAD_EXE) -exit scripts_3D/read_def.tcl
+	python3 scripts_3D/save_map_lol.py
+	python3 scripts_3D/split_cts_def_lol.py
+	$(OPENROAD_EXE) -exit scripts_3D/lg_bottom.tcl
+	$(OPENROAD_EXE) -exit scripts_3D/lg_upper.tcl
+	python3 scripts_3D/read_def_store_coord.py
+	$(OPENROAD_EXE) -exit scripts_3D/load_cts.tcl
+	cp $(RESULTS_DIR)/my_cts.odb $(RESULTS_DIR)/4_cts.odb
+	cp $(RESULTS_DIR)/1_synth.sdc $(RESULTS_DIR)/4_cts.sdc
+	$(UNSET_AND_MAKE) do-5_1_grt
+
+.PHONY: do-company-flow
+ifeq ($(COMPANY_ROUTE_MODE),postplace)
+do-company-flow: do-company-postplace
+else
+do-company-flow: do-lolflow
+endif
+
 .PHONY: do-get_3d_hpwl
 do-get_3d_hpwl:
 	$(OPENROAD_EXE) -exit scripts_3D/get_hpwl_3d.tcl

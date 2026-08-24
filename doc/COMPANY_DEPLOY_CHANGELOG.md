@@ -2,6 +2,32 @@
 
 本文件记录 `huawei-partition` 分支针对公司离线环境和公司 3D placer 的适配。后续提交按时间倒序追加，记录行为变化、兼容性影响、验证结果和遗留事项；不要在此写入公司 URL、账号、token、license server、内部 PDK 路径或专有 DEF 内容。
 
+## 2026-08-24：三种 company 实验模式和阶段化 timing 报告
+
+### Route mode
+
+- 新增共享配置 `flow/designs/nangate45_3D/config_company_route_modes.mk`，四个 company case 共同引用。
+- `run_company_3d.sh` 新增 `--route-mode postplace|quick|quality`：postplace 只运行 GR 并停止；quick 使用 GR/DR 各 5 轮；quality 使用 GR 50 轮、DR 默认停止条件。
+- 默认模式由 quality 改为 quick；不写参数等价于 `--route-mode quick`。
+- 新增 `do-company-postplace`/`do-company-flow`，postplace 不进入 Detailed Routing 和 Finish，也不支持 `--hotspot`。
+- 三种模式分别使用 `company_postplace`、`company_quick`、`company_quality` 作为 `FLOW_VARIANT`，隔离 results、logs 和 reports。
+
+### Reports
+
+- Global Routing 报告从 `congestion.rpt` 改名为 `postplace_global_congestion.rpt`，并新增 `postplace_congestion.webp`（部分构建可能为 `.webp.png`）。
+- Finish 将 `5_route_drc.rpt` 复制为 `final_detailed_route_drc.rpt`；继续生成 final congestion 图片。
+- 新增 `postplace_timing.rpt`：GR 后 `estimate_parasitics -global_routing` 的 setup/hold 报告。
+- 新增 `final_timing.rpt`：Finish 中 OpenRCX extraction、SPEF 回读后的 setup/hold 报告。
+- Timing 报告默认各输出 100 条路径，可用 `TIMING_REPORT_PATH_COUNT` 调整；company config 仍使用 `IDEAL_CLOCK=1`，不等同 signoff OCV/MMMC STA。
+- congestion `.rpt` 是 overflow marker 报告；无 overflow 时部分 OpenROAD 版本不会创建空文件，需结合 `5_1_grt.log` 判断 GR 是否完成。
+
+### 文档和验证
+
+- 重写 `DEPLOY_README.zh-CN.md`，主线改为 CodeHub clone → CentOS 首次安装 Docker/加载镜像 → 启动容器 → 选择 route mode 运行 company 实验，并区分首次部署、WSL 重启和日常运行步骤。
+- 文档补充可选参数、输出目录、reports/results/logs 内容和 timing/congestion/DRC 解释。
+- 部署指南中的 company 命令改为使用容器内 `/workspace/company-input/<design>_{top,bot}.def` 完整路径，并补充 DEF 转换、legalization、routing、finish 的流程图及 results/reports 目录树。
+- Bash 语法、Make mode 选择、`git diff --check` 和现有 9 个 Python 单元测试通过；尚未在缺少 OpenROAD/Tcl 的当前 WSL 做端到端报告生成验证。
+
 ## 2026-08-17：忽略 backend evaluation 运行产物
 
 - `OpenROAD-3D/.gitignore` 新增 `flow/logs/`、`flow/reports/` 和 `flow/results/`，并将已有 `flow/objects` 规范为目录规则。

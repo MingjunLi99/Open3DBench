@@ -1,7 +1,6 @@
 export DESIGN_NAME = ExampleRocketSystem
 export DESIGN_NICKNAME = tinyRocket
 export PLATFORM = nangate45_3D
-export FLOW_VARIANT = company
 export INPUT_DEF = $(COMPANY_3D_DEF)
 export IDEAL_CLOCK = 1
 
@@ -24,5 +23,4 @@ export DIE_AREA = 0 0 1000 1000
 export CORE_AREA = 0 0 1000 1000
 export TNS_END_PERCENT = 100
 export SKIP_GATE_CLONING = 1
-export DETAILED_ROUTE_ARGS = -droute_end_iter 5
-export GLOBAL_ROUTE_ARGS = -allow_congestion -verbose -congestion_iterations 5
+include ./designs/nangate45_3D/config_company_route_modes.mk
